@@ -1,0 +1,25 @@
+{
+  "name": "project-workspace-root",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "Client",
+    "Server"
+  ],
+  "scripts": {
+    "install:all": "npm install",
+    "dev": "npm run dev:orchestrate --silent",
+    "dev:orchestrate": "concurrently -k -p \"[{name}]\" -n \"Client,Server\" -c \"cyan,green\" \"npm run dev --workspace=Client\" \"npm run dev --workspace=Server\"",
+    "build:all": "npm run build --workspace=Client && npm run build --workspace=Server"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/cors": "^2.8.19",
+    "concurrently": "^8.2.2",
+    "tsx": "^4.7.1"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "cors": "^2.8.6"
+  }
+}
