@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/Component/UI/sonner";
 import { Toaster } from "@/Component/UI/toaster";
 import { TooltipProvider } from "@/Component/UI/tooltip";
 import { App_Provider } from "@/Context/App";
+import { NavigationProvider, GlobalNavOverlay } from "@/Context/Navigation";
 import { Layout } from "@/Component/Layout/Index";
 
 // Main Pages
@@ -21,7 +22,7 @@ import { Chess_Puzzle_View } from "@/Page/Chess/Puzzle";
 import Language_Root from "@/Page/Language/Root";
 import Language_Index from "@/Page/Language/Index";
 
-// Language Lesson Views (Split routes)
+// Language Lesson Views
 import Levels_Page from "@/Page/Language/Lesson/Index";
 import Level_Page from "@/Page/Language/Lesson/Level";
 import Lesson_Runner_Page from "@/Page/Language/Lesson/Lesson";
@@ -49,65 +50,63 @@ export default function App() {
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <Routes>
-              <Route path="/Sign" element={<Auth_Page />} />
+            <NavigationProvider>
+              <GlobalNavOverlay />
+              <Routes>
+                <Route path="/Sign" element={<Auth_Page />} />
 
-              {/* Layout-wrapped application paths */}
-              <Route element={<RouteLayout />}>
-                <Route path="/" element={<Root_Picker />} />
+                {/* Layout-wrapped application paths */}
+                <Route element={<RouteLayout />}>
+                  <Route path="/" element={<Root_Picker />} />
 
-                {/* Explicit Navigation Tree for Chess */}
-                <Route path="/Chess">
-                  <Route index element={<Chess_Index />} />
-                  <Route path="Play" element={<Chess_Play_View />} />
-                  <Route path="Puzzle" element={<Chess_Puzzle_View />} />
+                  {/* Chess Navigation Tree */}
+                  <Route path="/Chess">
+                    <Route index element={<Chess_Index />} />
+                    <Route path="Play" element={<Chess_Play_View />} />
+                    <Route path="Puzzle" element={<Chess_Puzzle_View />} />
 
-                  {/* Lessons Navigation Routes mapped to Chess_Lesson_View */}
-                  <Route path="Lesson">
-                    <Route index element={<Chess_Lesson_View />} />
-                    <Route path=":Category">
-                      <Route index element={<Chess_Lesson_View />} />
-                      <Route path=":subcategory">
-                        <Route index element={<Chess_Lesson_View />} />
-                        <Route path=":Lesson_ID" element={<Chess_Lesson_View />} />
-                      </Route>
-                    </Route>
-                  </Route>
-                </Route>
-
-                {/* Strictly Capitalized Navigation Trees */}
-                <Route path="/Language">
-                  <Route index element={<Language_Root />} />
-                  <Route path=":Lang_Name">
-                    <Route index element={<Language_Index />} />
-
-                    {/* Language Lessons Nested Router Structure */}
                     <Route path="Lesson">
-                      {/* Levels Grid (e.g. /Language/English/Lesson) */}
-                      <Route index element={<Levels_Page />} />
-                      {/* Lessons Grid (e.g. /Language/English/Lesson/I) */}
-                      <Route path=":Level_Id">
-                        <Route index element={<Level_Page />} />
-                        {/* Lesson Runner (e.g. /Language/English/Lesson/I/The-Alphabet) */}
-                        <Route path=":Lesson_Slug" element={<Lesson_Runner_Page />} />
+                      <Route index element={<Chess_Lesson_View />} />
+                      <Route path=":Category">
+                        <Route index element={<Chess_Lesson_View />} />
+                        <Route path=":subcategory">
+                          <Route index element={<Chess_Lesson_View />} />
+                          <Route path=":Lesson_ID" element={<Chess_Lesson_View />} />
+                        </Route>
                       </Route>
                     </Route>
+                  </Route>
 
-                    <Route path="Dictionary">
-                      <Route index element={<Dictionary_Root />} />
-                      <Route path="Vocabulary">
-                        <Route index element={<Dictionary_Category />} />
-                        <Route path=":Category_ID" element={<Dictionary_Subcategory />} />
-                        <Route path=":Category_ID/:Subcategory_ID" element={<Dictionary_Word />} />
-                        <Route path=":Category_ID/:Subcategory_ID/:Word_ID" element={<Word_Detail_View />} />
+                  {/* Language Navigation Tree */}
+                  <Route path="/Language">
+                    <Route index element={<Language_Root />} />
+                    <Route path=":Lang_Name">
+                      <Route index element={<Language_Index />} />
+
+                      <Route path="Lesson">
+                        <Route index element={<Levels_Page />} />
+                        <Route path=":Level_Id">
+                          <Route index element={<Level_Page />} />
+                          <Route path=":Lesson_Slug" element={<Lesson_Runner_Page />} />
+                        </Route>
+                      </Route>
+
+                      <Route path="Dictionary">
+                        <Route index element={<Dictionary_Root />} />
+                        <Route path="Vocabulary">
+                          <Route index element={<Dictionary_Category />} />
+                          <Route path=":Category_ID" element={<Dictionary_Subcategory />} />
+                          <Route path=":Category_ID/:Subcategory_ID" element={<Dictionary_Word />} />
+                          <Route path=":Category_ID/:Subcategory_ID/:Word_ID" element={<Word_Detail_View />} />
+                        </Route>
                       </Route>
                     </Route>
                   </Route>
                 </Route>
-              </Route>
 
-              <Route path="*" element={<Not_Found />} />
-            </Routes>
+                <Route path="*" element={<Not_Found />} />
+              </Routes>
+            </NavigationProvider>
           </BrowserRouter>
         </TooltipProvider>
       </App_Provider>
