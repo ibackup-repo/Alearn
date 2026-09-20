@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { Supported_Language, Lesson_Record } from "@/Library/Language-Types";
 import { Get_Lessons_List } from "@/Library/Language-API";
 import { Lesson_ID, Record_Result } from "@/Library/Lesson-Mastery";
@@ -9,17 +9,42 @@ import { Parse_Alphabet_Lesson, type Alphabet_Content_Block } from "@/Component/
 
 const Practice_Kinds = new Set(["multipleChoice", "matchPairs", "typeAnswer", "orderSentence"]);
 
+/**
+ * Clean helper function to ensure plain serializable objects 
+ * and break any circular references attached by React/DOM nodes.
+ */
+function Clean_Step_Item(item: any): any {
+  if (item === null || typeof item !== "object") {
+    return item;
+  }
+
+  // Omit React fiber internal keys and DOM element nodes
+  const cleanObj: Record<string, any> = {};
+  for (const key of Object.keys(item)) {
+    if (
+      key.startsWith("__react") ||
+      key.startsWith("$$typeof") ||
+      item[key] instanceof HTMLElement ||
+      item[key] instanceof Node
+    ) {
+      continue;
+    }
+    cleanObj[key] = item[key];
+  }
+  return cleanObj;
+}
+
 function Flatten_Steps(content: Alphabet_Content_Block[]): any[] {
   return content.flatMap((block) => {
     if (block.kind === "vocab") {
-      return block.entries.map((entry) => ({ kind: "vocab", ...entry }));
+      return block.entries.map((entry) => Clean_Step_Item({ kind: "vocab", ...entry }));
     }
     if (block.kind === "practice") {
       return block.activities.flatMap((activity) =>
-        activity.items.map((item: any) => ({ kind: activity.kind, ...item }))
+        activity.items.map((item: any) => Clean_Step_Item({ kind: activity.kind, ...item }))
       );
     }
-    return [block];
+    return [Clean_Step_Item(block)];
   });
 }
 
@@ -31,7 +56,6 @@ export default function Lesson_Page() {
   }>();
 
   const activeLang = (Lang_Name || "English") as Supported_Language;
-  const navigate = useNavigate();
 
   const [steps, setSteps] = useState<any[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -73,7 +97,7 @@ export default function Lesson_Page() {
           const parsed = Parse_Alphabet_Lesson(rawSteps);
           setSteps(Flatten_Steps(parsed.content));
         } else {
-          setSteps(rawSteps);
+          setSteps(rawSteps.map(Clean_Step_Item));
         }
       })
       .catch((err) => {
@@ -90,6 +114,7 @@ export default function Lesson_Page() {
 
   useEffect(() => {
     if (!steps) return;
+    // Pass strictly primitive numerical values to prevent circular structure leaks
     Lesson_Progress.set({ current: Math.min(index, steps.length), total: steps.length });
     return () => Lesson_Progress.set(null);
   }, [index, steps]);
@@ -98,7 +123,14 @@ export default function Lesson_Page() {
     if (!done || result) return;
     const accuracy = practiceTotal ? practiceOk / practiceTotal : 1;
     const perfect = practiceTotal > 0 && practiceOk === practiceTotal;
-    setResult(Record_Result(activeLang, id, { perfect, Accuracy: accuracy }));
+    
+    // Pass strictly clean primitive data into Record_Result
+    const statsPayload = {
+      perfect: Boolean(perfect),
+      Accuracy: Number(accuracy),
+    };
+    
+    setResult(Record_Result(activeLang, id, statsPayload));
   }, [done, result, practiceOk, practiceTotal, activeLang, id]);
 
   if (loading) return <div className="text-sm py-6 text-center opacity-60">Loading exercise data...</div>;
@@ -113,7 +145,7 @@ export default function Lesson_Page() {
       : null;
 
     return (
-      <div className="max-w-md lg:max-w-xl mx-auto w-full">
+      <div className="max-w-md lg:max-w-xl mx-auto w-full relative z-[90] bg-transparent">
         <Lesson_Complete_Screen
           title={(Lesson_Slug || "").replace(/-/g, " ")}
           Stars={result?.Stars ?? 0}
@@ -122,14 +154,14 @@ export default function Lesson_Page() {
           Accuracy={accuracy}
           perfect={perfect}
           Next_In_Days={nextInDays}
-          On_Done={() => navigate(`/Language/${activeLang}/Lesson/${Level_Id}`)}
+          NavigateTo={`/Language/${activeLang}/Lesson/${Level_Id}`}
         />
       </div>
     );
   }
 
   return (
-    <div className="max-w-md lg:max-w-xl mx-auto w-full space-y-4">
+    <div className="max-w-md lg:max-w-xl mx-auto w-full pt-2 space-y-4 relative z-[99] bg-transparent border-none shadow-none">
       <Exercise
         key={index}
         step={steps[index]}

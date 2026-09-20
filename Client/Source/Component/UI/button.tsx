@@ -1,27 +1,49 @@
 import React, { useState, useRef, useEffect } from "react";
+import { motion } from "framer-motion";
 import Fluid from "./Fluid";
 import { useNavTransition } from "@/Context/Navigation";
+import { cn } from "@/Library/Utility";
+
+export type ButtonVariant = "primary" | "secondary";
 
 export interface FluidButtonProps {
-  Label: string;
+  Label?: string | React.ReactNode;
+  Icon?: React.ReactNode;
   OnClick?: (e?: React.MouseEvent<HTMLDivElement>) => void;
   NavigateTo?: string;
   BeautifiedHover?: boolean;
   Height?: number;
   Padding?: number;
+  variant?: ButtonVariant;
   Color?: string;
   TextColor?: string;
+  borderRadius?: number;
+  hasBorder?: boolean;
+  borderColor?: string;
+  size?: "default" | "icon" | "sm" | "lg";
+  className?: string;
+  style?: React.CSSProperties;
+  "aria-label"?: string;
 }
 
 export const Button: React.FC<FluidButtonProps> = ({
   Label,
+  Icon,
   OnClick,
   NavigateTo,
   BeautifiedHover = true,
-  Height = 64,
-  Padding = 30,
-  Color = "#ffffff",
-  TextColor = "#0f172a",
+  Height = 48,
+  Padding = 12,
+  variant = "primary",
+  Color,
+  TextColor,
+  borderRadius = 24,
+  hasBorder = false,
+  borderColor = "transparent",
+  size = "default",
+  className,
+  style,
+  "aria-label": ariaLabel,
 }) => {
   const [IsHovered, SetIsHovered] = useState(false);
   const [IsPressed, SetIsPressed] = useState(false);
@@ -31,7 +53,22 @@ export const Button: React.FC<FluidButtonProps> = ({
   const ContainerRef = useRef<HTMLDivElement>(null);
   const TouchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const { triggerTransition, phase } = useNavTransition();
+  const { triggerTransition } = useNavTransition();
+
+  // Standaard kleuren op basis van de variant
+  const defaultBgColor = variant === "secondary" ? "#e2e8f0" : "#ffffff";
+  const defaultTextColor = variant === "secondary" ? "#334155" : "#0f172a";
+
+  // Bepaal de definitieve stijlen
+  const resolvedBgColor = Color || defaultBgColor;
+  const resolvedTextColor = TextColor || defaultTextColor;
+  const resolvedBorderRadius = borderRadius;
+  const resolvedHasBorder = hasBorder;
+  const resolvedBorderColor = borderColor;
+
+  const isIconOnly = size === "icon" || (!Label && !!Icon);
+  const actualHeight = size === "sm" ? 32 : size === "lg" ? 48 : size === "icon" ? 48 : Height;
+  const actualWidth = isIconOnly ? actualHeight : undefined;
 
   useEffect(() => {
     if (!ContainerRef.current) return;
@@ -46,8 +83,8 @@ export const Button: React.FC<FluidButtonProps> = ({
     return () => Observer.disconnect();
   }, []);
 
-  const ContainerWidth = Width + Padding * 2;
-  const ContainerHeight = Height + Padding * 2;
+  const ContainerWidth = (actualWidth || Width) + Padding * 2;
+  const ContainerHeight = actualHeight + Padding * 2;
 
   const HandleMouseMove = (E: React.MouseEvent<HTMLDivElement>) => {
     const Rect = E.currentTarget.getBoundingClientRect();
@@ -79,15 +116,8 @@ export const Button: React.FC<FluidButtonProps> = ({
 
   const HandleClick = (E: React.MouseEvent<HTMLDivElement>) => {
     if (NavigateTo) {
-      if (phase !== "idle") return;
-
-      const domRect = E.currentTarget.getBoundingClientRect();
-      triggerTransition(NavigateTo, {
-        top: domRect.top,
-        left: domRect.left,
-        width: domRect.width,
-        height: domRect.height,
-      });
+      const labelText = typeof Label === "string" ? Label : ariaLabel || "";
+      triggerTransition(NavigateTo, labelText);
     }
 
     if (OnClick) {
@@ -95,19 +125,26 @@ export const Button: React.FC<FluidButtonProps> = ({
     }
   };
 
+  const resolvedAriaLabel = ariaLabel || (typeof Label === "string" ? Label : undefined);
+
   return (
-    <div
+    <motion.div
       ref={ContainerRef}
+      role="button"
+      tabIndex={0}
+      aria-label={resolvedAriaLabel}
+      layoutId={NavigateTo ? `shared-btn-${NavigateTo}` : undefined}
+      className={cn(
+        "flex items-center justify-center shrink-0 relative select-none cursor-pointer overflow-hidden w-full transition-all duration-150",
+        className
+      )}
       style={{
-        position: "relative",
-        width: "100%",
-        height: `${Height}px`,
-        cursor: "pointer",
-        userSelect: "none",
-        WebkitTapHighlightColor: "transparent",
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
+        width: actualWidth ? `${actualWidth}px` : "100%",
+        height: `${actualHeight}px`,
+        borderRadius: `${resolvedBorderRadius}px`,
+        backgroundColor: resolvedBgColor,
+        border: resolvedHasBorder ? `2px solid ${resolvedBorderColor}` : "none",
+        ...style,
       }}
       onMouseEnter={(E) => {
         SetIsHovered(true);
@@ -126,22 +163,9 @@ export const Button: React.FC<FluidButtonProps> = ({
       onTouchCancel={HandleTouchEnd}
       onClick={HandleClick}
     >
-      <svg
-        style={{
-          position: "absolute",
-          width: 0,
-          height: 0,
-          pointerEvents: "none",
-        }}
-      >
+      <svg style={{ position: "absolute", width: 0, height: 0, pointerEvents: "none" }}>
         <defs>
-          <filter
-            id="standalone-btn-gooey"
-            x="-50%"
-            y="-50%"
-            width="200%"
-            height="200%"
-          >
+          <filter id="standalone-btn-gooey" x="-50%" y="-50%" width="200%" height="200%">
             <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur" />
             <feColorMatrix
               in="blur"
@@ -162,8 +186,8 @@ export const Button: React.FC<FluidButtonProps> = ({
         style={{
           position: "absolute",
           inset: 0,
-          backgroundColor: Color,
-          borderRadius: `${Height / 2}px`,
+          backgroundColor: resolvedBgColor,
+          borderRadius: `${resolvedBorderRadius}px`,
           opacity: IsHovered ? 0 : 1,
           transition: "opacity 0.3s ease",
           pointerEvents: "none",
@@ -180,16 +204,18 @@ export const Button: React.FC<FluidButtonProps> = ({
             height: `${ContainerHeight}px`,
             filter: "url('#standalone-btn-gooey')",
             pointerEvents: "none",
+            borderRadius: `${resolvedBorderRadius}px`,
+            overflow: "hidden",
           }}
         >
           {BeautifiedHover && (
             <Fluid
               isHovered={IsHovered}
               isPressed={IsPressed}
-              width={Width}
-              height={Height}
+              width={isIconOnly ? actualHeight : Width}
+              height={actualHeight}
               padding={Padding}
-              color={Color}
+              color={resolvedBgColor}
               cursorPos={CursorPos}
               drawBody={true}
             />
@@ -197,18 +223,21 @@ export const Button: React.FC<FluidButtonProps> = ({
         </div>
       )}
 
-      <span
+      {/* Tekst en Icon */}
+      <motion.span
         style={{
           position: "relative",
           zIndex: 10,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
+          gap: "6px",
           width: "100%",
           height: "100%",
-          color: TextColor,
+          padding: isIconOnly ? "0" : "0 12px",
+          color: resolvedTextColor,
           fontWeight: 700,
-          fontSize: "16px",
+          fontSize: "14px",
           letterSpacing: "0.05em",
           textTransform: "uppercase",
           textAlign: "center",
@@ -217,9 +246,10 @@ export const Button: React.FC<FluidButtonProps> = ({
           pointerEvents: "none",
         }}
       >
-        {Label}
-      </span>
-    </div>
+        {Icon}
+        {Label && <span>{Label}</span>}
+      </motion.span>
+    </motion.div>
   );
 };
 

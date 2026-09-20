@@ -7,7 +7,7 @@ export type International_Language = "Dutch" | "English" | "Arabic";
 export type Short_Lang = "en" | "nl" | "ar" | "ps";
 
 // FIX: Pull directly from the build-time injected environment variables
-const BACKEND_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://organic-space-guacamole-5gpjqpg7xgqrc4j55-4000.app.github.dev";
+const BACKEND_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://sturdy-journey-77pp996jj4x4cpq6-4000.app.github.dev";
 
 const SHORT_TO_I18N: Record<string, International_Language> = {
   en: "English",

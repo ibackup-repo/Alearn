@@ -130,7 +130,7 @@ export function Browse_Path_To_Url(path: string[]): string {
     if (branch === "lessons") {
       // ["language", code, "lessons", level?, unit?, lesson?, sub?]
       const rest = path.slice(3).map(enc);
-      return [`${base}/Lessons`, ...rest].filter(Boolean).join("/");
+      return [`${base}/Lesson`, ...rest].filter(Boolean).join("/");
     }
     if (branch === "_marked") {
       return `${base}/Dictionary/Vocabulary/${Language_Content_Segments(path.slice(3)).map(enc).join("/")}`;

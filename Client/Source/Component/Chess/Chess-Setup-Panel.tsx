@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Container } from "@/Component/UI/container";
-import { Button } from "@/Component/UI/Button";
-import { Slider } from "@/Component/UI/slider";
-import { Switch } from "@/Component/UI/switch";
+import { Button } from "@/Component/UI/button";
+import { Slider } from "@/Component/UI/Slider";
+import { SegmentedControl } from "@/Component/UI/Segmented-Control";
+import { LiquidToggle } from "@/Component/UI/Toggle-Switch";
 import { cn } from "@/Library/Utility";
-import { Play, Crown, Shuffle, Sparkles } from "lucide-react";
+import { Crown, Shuffle } from "lucide-react";
 
 export type Color_Choice = "white" | "black" | "random";
 
@@ -25,6 +26,7 @@ export interface Game_Config {
   Suggestion_Arrows: boolean;
   Move_Feedback: boolean;
   engine: boolean;
+  chat: boolean;
 }
 
 export const Quick_Timers: Timer_Preset[] = [
@@ -52,6 +54,7 @@ export function Chess_Setup_Panel({ onPlay, className }: Properties) {
     Suggestion_Arrows: false,
     Move_Feedback: false,
     engine: true,
+    chat: true,
   });
 
   const [Base_Minutes, setBaseMinutes] = useState<number>(
@@ -83,193 +86,172 @@ export function Chess_Setup_Panel({ onPlay, className }: Properties) {
     });
   };
 
-  const Select_Preset = (preset: Timer_Preset) => {
+  const Select_Preset = (presetId: string) => {
+    const preset = Quick_Timers.find((p) => p.id === presetId);
+    if (!preset) return;
     update("timer", preset);
     setBaseMinutes(Math.floor(preset.Base_MS / 60_000));
     setIncSeconds(Math.floor(preset.Inc_MS / 1_000));
   };
 
   return (
-    <div className={cn("w-full max-w-4xl mx-auto space-y-4 select-none p-2", className)}>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Left Column */}
-        <div className="space-y-4">
-          {/* Engine Rating */}
-          <Container className="p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <Container className="px-2 py-0.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                Rating
-              </Container>
-              <Container className="font-mono font-bold px-2.5 py-0.5 text-xs">
-                {config.Elo} ELO
-              </Container>
-            </div>
-            <Slider
-              min={100}
-              max={3200}
-              step={100}
-              value={[config.Elo]}
-              onValueChange={([val]) => update("Elo", val)}
-            />
-          </Container>
+    <div
+      className={cn(
+        "w-full py-2 px-4 flex flex-col gap-1.5 relative z-[49] max-w-4xl mx-auto select-none bg-transparent overflow-visible",
+        className
+      )}
+    >
+      {/* Row 1: Rating (Left) & Minutes (Right) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-center overflow-visible">
+        <Container className="p-1 bg-transparent border-0 shadow-none overflow-visible">
+          <Slider
+            title="Rating"
+            min={100}
+            max={3200}
+            step={100}
+            value={[config.Elo]}
+            onValueChange={([val]) => update("Elo", val)}
+          />
+        </Container>
 
-          {/* Play Side */}
-          <Container className="p-4">
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { id: "white", label: "White", icon: <Crown className="w-4 h-4 fill-current" /> },
-                { id: "random", label: "Random", icon: <Shuffle className="w-4 h-4" /> },
-                { id: "black", label: "Black", icon: <Crown className="w-4 h-4 fill-background" /> },
-              ].map((side) => (
-                <button
-                  key={side.id}
-                  type="button"
-                  onClick={() => update("color", side.id as Color_Choice)}
-                  className={cn(
-                    "flex items-center justify-center gap-2 py-2.5 px-3 rounded-full border text-xs font-semibold transition-all",
-                    config.color === side.id
-                      ? "border-primary bg-primary text-primary-foreground shadow-xs"
-                      : "border-input bg-background hover:bg-accent"
-                  )}
-                >
-                  {side.icon}
-                  <span>{side.label}</span>
-                </button>
-              ))}
-            </div>
-          </Container>
-
-          {/* Variant (No title) */}
-          <Container className="p-4">
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => update("variant", "standard")}
-                className={cn(
-                  "py-2.5 px-3 rounded-full border text-center font-semibold text-xs transition-all",
-                  config.variant === "standard"
-                    ? "border-primary bg-primary/5 ring-1 ring-primary"
-                    : "border-input bg-background hover:bg-accent"
-                )}
-              >
-                Standard
-              </button>
-
-              <button
-                type="button"
-                onClick={() => update("variant", "960")}
-                className={cn(
-                  "py-2.5 px-3 rounded-full border text-center font-semibold text-xs flex items-center justify-center gap-1.5 transition-all",
-                  config.variant === "960"
-                    ? "border-primary bg-primary/5 ring-1 ring-primary"
-                    : "border-input bg-background hover:bg-accent"
-                )}
-              >
-                Chess 960 <Sparkles className="w-3 h-3 text-amber-500" />
-              </button>
-            </div>
-          </Container>
-        </div>
-
-        {/* Right Column */}
-        <div className="space-y-4">
-          {/* Custom Sliders & Quick Timers */}
-          <Container className="p-4 space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              {/* Minutes Slider */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Container className="px-2 py-0.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                    Minutes
-                  </Container>
-                  <Container className="font-mono text-xs font-semibold px-2 py-0.5">
-                    {Base_Minutes}m
-                  </Container>
-                </div>
-                <Slider
-                  min={0}
-                  max={60}
-                  step={1}
-                  value={[Base_Minutes]}
-                  onValueChange={([val]) => Handle_Custom_Timer_Change(val, Inc_Seconds)}
-                />
-              </div>
-
-              {/* Increment Slider */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Container className="px-2 py-0.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                    Increment
-                  </Container>
-                  <Container className="font-mono text-xs font-semibold px-2 py-0.5">
-                    +{Inc_Seconds}s
-                  </Container>
-                </div>
-                <Slider
-                  min={0}
-                  max={30}
-                  step={1}
-                  value={[Inc_Seconds]}
-                  onValueChange={([val]) => Handle_Custom_Timer_Change(Base_Minutes, val)}
-                />
-              </div>
-            </div>
-
-            {/* Quick Presets */}
-            <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border">
-              {Quick_Timers.map((p) => {
-                const isSelected = config.timer.id === p.id;
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => Select_Preset(p)}
-                    className={cn(
-                      "py-2 px-3 rounded-full text-xs font-medium border text-center transition-all truncate",
-                      isSelected
-                        ? "bg-primary text-primary-foreground border-primary font-semibold"
-                        : "bg-background border-input hover:bg-accent"
-                    )}
-                  >
-                    {p.label}
-                  </button>
-                );
-              })}
-            </div>
-          </Container>
-
-          {/* Assists & Aids */}
-          <Container className="p-4">
-            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-              {[
-                { key: "Eval_Bar", label: "Eval Bar" },
-                { key: "Threat_Arrows", label: "Threat Arrows" },
-                { key: "Suggestion_Arrows", label: "Suggestions" },
-                { key: "Move_Feedback", label: "Move Feedback" },
-                { key: "engine", label: "Engine Assist" },
-              ].map(({ key, label }) => (
-                <div key={key} className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-muted-foreground">{label}</span>
-                  <Switch
-                    checked={Boolean(config[key as keyof Game_Config])}
-                    onCheckedChange={(val) => update(key as keyof Game_Config, val)}
-                    className="scale-85 origin-right"
-                  />
-                </div>
-              ))}
-            </div>
-          </Container>
-        </div>
+        <Container className="p-1 bg-transparent border-0 shadow-none overflow-visible">
+          <Slider
+            title="Minutes"
+            min={0}
+            max={60}
+            step={1}
+            value={[Base_Minutes]}
+            onValueChange={([val]) => Handle_Custom_Timer_Change(val, Inc_Seconds)}
+          />
+        </Container>
       </div>
 
-      {/* CTA Button */}
-      <Button
-        className="w-full gap-2 font-semibold shadow-xs py-5 text-base rounded-full active:scale-[0.99] transition-transform mt-2"
-        size="lg"
-        onClick={() => onPlay(config)}
-      >
-        <Play className="h-5 w-5 fill-current" /> Play Match
-      </Button>
+      {/* Row 2: Side / Color (Left) & Increment (Right) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-center overflow-visible">
+        <Container className="p-0.5 bg-transparent border-0 shadow-none overflow-visible">
+          <SegmentedControl
+            value={config.color}
+            onChange={(val) => update("color", val as Color_Choice)}
+            options={[
+              {
+                id: "white",
+                label: "White",
+                icon: <Crown className="w-4 h-4 fill-black text-black shrink-0" />,
+              },
+              {
+                id: "random",
+                label: "Random",
+                icon: <Shuffle className="w-4 h-4 text-black shrink-0" />,
+              },
+              {
+                id: "black",
+                label: "Black",
+                icon: <Crown className="w-4 h-4 fill-black text-black shrink-0" />,
+              },
+            ]}
+          />
+        </Container>
+
+        <Container className="p-1 bg-transparent border-0 shadow-none overflow-visible">
+          <Slider
+            title="Increment"
+            min={0}
+            max={30}
+            step={1}
+            value={[Inc_Seconds]}
+            onValueChange={([val]) => Handle_Custom_Timer_Change(Base_Minutes, val)}
+          />
+        </Container>
+      </div>
+
+      {/* Row 3: Variant (Left) & Preset Timers (Right) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-center overflow-visible">
+        <Container className="p-0.5 bg-transparent border-0 shadow-none overflow-visible">
+          <SegmentedControl
+            value={config.variant}
+            onChange={(val) => update("variant", val as "standard" | "960")}
+            options={[
+              { id: "standard", label: "Standard" },
+              { id: "960", label: "Chess 960" },
+            ]}
+          />
+        </Container>
+
+        <Container className="p-0.5 bg-transparent border-0 shadow-none overflow-visible">
+          <SegmentedControl
+            value={config.timer.id}
+            onChange={Select_Preset}
+            options={Quick_Timers.map((p) => ({ id: p.id, label: p.label }))}
+            height={36}
+          />
+        </Container>
+      </div>
+
+      {/* Row 4: Threats & Suggestions (Left) & Eval Bar & Engine Assist (Right) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-center overflow-visible">
+        <Container className="p-1 bg-transparent border-0 shadow-none overflow-visible">
+          <div className="grid grid-cols-2 gap-x-4 overflow-visible">
+            {[
+              { key: "Threat_Arrows", label: "Threat Arrows" },
+              { key: "Suggestion_Arrows", label: "Suggestions" },
+            ].map(({ key, label }) => (
+              <div key={key} className="flex items-center justify-between overflow-visible">
+                <span className="text-xs font-bold text-black">{label}</span>
+                <LiquidToggle
+                  checked={Boolean(config[key as keyof Game_Config])}
+                  onChange={(val) => update(key as keyof Game_Config, val)}
+                />
+              </div>
+            ))}
+          </div>
+        </Container>
+
+        <Container className="p-1 bg-transparent border-0 shadow-none overflow-visible">
+          <div className="grid grid-cols-2 gap-x-4 overflow-visible">
+            {[
+              { key: "Eval_Bar", label: "Eval Bar" },
+              { key: "engine", label: "Engine Assist" },
+            ].map(({ key, label }) => (
+              <div key={key} className="flex items-center justify-between overflow-visible">
+                <span className="text-xs font-bold text-black">{label}</span>
+                <LiquidToggle
+                  checked={Boolean(config[key as keyof Game_Config])}
+                  onChange={(val) => update(key as keyof Game_Config, val)}
+                />
+              </div>
+            ))}
+          </div>
+        </Container>
+      </div>
+
+      {/* Row 5: Play Match (Left) & Move Feedback & Chat (Right) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-center mt-1 overflow-visible">
+        <Button
+          Label="Play Match"
+          Color="#000000"
+          TextColor="#ffffff"
+          Height={52}
+          OnClick={() => onPlay(config)}
+          className="w-full font-bold shadow-xs text-base rounded-full active:scale-[0.99] transition-transform border border-black"
+        />
+
+        <Container className="p-1 bg-transparent border-0 shadow-none overflow-visible">
+          <div className="grid grid-cols-2 gap-x-4 overflow-visible">
+            {[
+              { key: "Move_Feedback", label: "Move Feedback" },
+              { key: "chat", label: "Chat" },
+            ].map(({ key, label }) => (
+              <div key={key} className="flex items-center justify-between overflow-visible">
+                <span className="text-xs font-bold text-black">{label}</span>
+                <LiquidToggle
+                  checked={Boolean(config[key as keyof Game_Config])}
+                  onChange={(val) => update(key as keyof Game_Config, val)}
+                />
+              </div>
+            ))}
+          </div>
+        </Container>
+      </div>
     </div>
   );
 }

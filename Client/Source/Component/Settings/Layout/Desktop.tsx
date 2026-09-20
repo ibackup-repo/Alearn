@@ -36,38 +36,40 @@ export function Desktop({
   const Filtered_Data = useMemo(() => {
     if (!query.trim()) {
       // No query: return all categories with all subcategories
-      return SETTINGS_CATEGORIES.map(cat => ({
+      return SETTINGS_CATEGORIES.map((cat) => ({
         ...cat,
-        subcategories: cat.hasSubcategories ? Get_Subcategories(cat.id) : []
+        subcategories: cat.hasSubcategories ? Get_Subcategories(cat.id) : [],
       }));
     }
 
     const Query_Lower = query.toLowerCase();
     const results: typeof SETTINGS_CATEGORIES = [];
-    
+
     for (const cat of SETTINGS_CATEGORIES) {
-      const Cat_Matches = cat.Label_Key.toLowerCase().includes(Query_Lower) || 
-                         cat.fallback.toLowerCase().includes(Query_Lower);
+      const Cat_Matches =
+        cat.Label_Key.toLowerCase().includes(Query_Lower) ||
+        cat.fallback.toLowerCase().includes(Query_Lower);
       let Matching_Subs = [];
       if (cat.hasSubcategories) {
         const subs = Get_Subcategories(cat.id);
-        Matching_Subs = subs.filter(sub => 
-          sub.Label_Key.toLowerCase().includes(Query_Lower) || 
-          sub.fallback.toLowerCase().includes(Query_Lower)
+        Matching_Subs = subs.filter(
+          (sub) =>
+            sub.Label_Key.toLowerCase().includes(Query_Lower) ||
+            sub.fallback.toLowerCase().includes(Query_Lower)
         );
       }
       if (Cat_Matches || Matching_Subs.length > 0) {
         results.push({
           ...cat,
-          subcategories: Matching_Subs
+          subcategories: Matching_Subs,
         });
       }
     }
-    
+
     // Determine top result: first matching subcategory, else first matching Category
     let Top_Category: Settings_Category_ID | null = null;
     let Top_Subcategory: string | null = null;
-    
+
     for (const cat of results) {
       if (cat.subcategories && cat.subcategories.length > 0) {
         Top_Category = cat.id;
@@ -79,21 +81,30 @@ export function Desktop({
       Top_Category = results[0].id;
       Top_Subcategory = null;
     }
-    
+
     // Automatically switch to the top result if different from current
-    if (Top_Category && (Top_Category !== Active_Category || Top_Subcategory !== Active_Subcategory)) {
-      // Use setTimeout to avoid state update during render loop
+    if (
+      Top_Category &&
+      (Top_Category !== Active_Category ||
+        Top_Subcategory !== Active_Subcategory)
+    ) {
       setTimeout(() => {
         On_Category_Change(Top_Category!);
         On_Subcategory_Change(Top_Subcategory);
       }, 0);
     }
-    
-    return results.map(cat => ({
+
+    return results.map((cat) => ({
       ...cat,
-      subcategories: cat.subcategories || []
+      subcategories: cat.subcategories || [],
     }));
-  }, [query, Active_Category, Active_Subcategory, On_Category_Change, On_Subcategory_Change]);
+  }, [
+    query,
+    Active_Category,
+    Active_Subcategory,
+    On_Category_Change,
+    On_Subcategory_Change,
+  ]);
 
   const Handle_Search_Click = () => {
     setIsSearchActive(true);
@@ -118,14 +129,13 @@ export function Desktop({
   }, [Is_Search_Active]);
 
   return (
-    <div className="fixed inset-0 z-40 bg-background">
+    <div className="fixed inset-0 z-[100] pointer-events-none">
       <div className="h-full flex">
-        {/* Sidebar */}
-        <div className="shrink-0 w-64 max-h-full flex flex-col pt-10 pl-6 pb-6 overflow-hidden self-start">
-          <div className="flex-1 min-h-0 p-2 flex flex-col overflow-y-auto">
-
+        {/* Sidebar: pointer-events-auto enables clicking here */}
+        <div className="shrink-0 w-64 h-full flex flex-col pt-[80px] pb-4 pl-[24px] pr-[8px] overflow-hidden relative z-[100] pointer-events-auto">
+          <div className="flex-1 min-h-0 flex flex-col overflow-y-auto">
             {/* Search Section */}
-            <div className="mt-5 mb-0">
+            <div className="relative z-[100] mb-4">
               {!Is_Search_Active ? (
                 <Button
                   onClick={Handle_Search_Click}
@@ -159,12 +169,13 @@ export function Desktop({
               )}
             </div>
 
-            {/* Categories List - filtered */}
-            <div className="space-y-2 flex-1 py-4">
+            {/* Categories List */}
+            <div className="relative z-[100] space-y-2 flex-1">
               {Filtered_Data.map((cat) => {
                 const isActive = Active_Category === cat.id;
-                const hasSubs = cat.subcategories && cat.subcategories.length > 0;
-                
+                const hasSubs =
+                  cat.subcategories && cat.subcategories.length > 0;
+
                 return (
                   <div key={cat.id}>
                     <Button
@@ -179,12 +190,15 @@ export function Desktop({
                       }}
                       className={cn(
                         "w-full flex items-center gap-2.5 h-auto px-3 py-2.5",
-                        isActive && "bg-black dark:bg-white text-white dark:text-black"
+                        isActive &&
+                          "bg-black dark:bg-white text-white dark:text-black"
                       )}
                     >
-                      <span className="text-sm font-medium">{cat.fallback}</span>
+                      <span className="text-sm font-medium">
+                        {cat.fallback}
+                      </span>
                     </Button>
-                    
+
                     {hasSubs && isActive && (
                       <div className="mt-2 space-y-2 ml-6">
                         {cat.subcategories.map((sub) => {
@@ -195,10 +209,13 @@ export function Desktop({
                               onClick={() => On_Subcategory_Change(sub.id)}
                               className={cn(
                                 "flex items-center gap-2.5 h-auto py-1.5 px-3 rounded-full",
-                                isActiveSub && "bg-black dark:bg-white text-white dark:text-black"
+                                isActiveSub &&
+                                  "bg-black dark:bg-white text-white dark:text-black"
                               )}
                             >
-                              <span className="text-sm font-medium">{sub.fallback}</span>
+                              <span className="text-sm font-medium">
+                                {sub.fallback}
+                              </span>
                             </Button>
                           );
                         })}
@@ -207,7 +224,7 @@ export function Desktop({
                   </div>
                 );
               })}
-              
+
               {Filtered_Data.length === 0 && query && (
                 <div className="text-center py-4 text-muted-foreground text-sm">
                   No results for "{query}"
@@ -217,14 +234,14 @@ export function Desktop({
           </div>
         </div>
 
-        {/* Content area */}
-        <ScrollArea className="flex-1 h-full">
-          <div className="pt-10">
-            <div className="p-6 max-w-2xl text-left">
+        {/* Content Box: pointer-events-auto enables clicking inside content */}
+        <div className="flex-1 mt-[80px] mb-[24px] mr-[24px] bg-black text-white rounded-2xl overflow-hidden relative z-[100] pointer-events-auto">
+          <ScrollArea className="h-full w-full">
+            <div className="p-8 w-full text-left">
               {children}
             </div>
-          </div>
-        </ScrollArea>
+          </ScrollArea>
+        </div>
       </div>
     </div>
   );

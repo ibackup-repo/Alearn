@@ -209,7 +209,7 @@ function Negamax(
     else if (tte.flag === 2 && tte.score < beta) beta = tte.score;
     if (alpha >= beta) return tte.score;
   }
-  if (game.Is_Game_Over()) return sign * evaluate(game);
+  if (game.isGameOver()) return sign * evaluate(game);
   if (depth <= 0) return Quiesce(game, alpha, beta, sign, 4);
 
   const inCheck = game.inCheck();

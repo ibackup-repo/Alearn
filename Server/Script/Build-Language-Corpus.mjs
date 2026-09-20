@@ -49,7 +49,7 @@ SUPPORTED_LANGS.forEach(lang => {
     }
 
     // Lesson Files
-    const lessonMatch = cleanPath.match(/\/Lessons\/([^/]+)\/([^/]+)\.json$/);
+    const lessonMatch = cleanPath.match(/\/Lesson\/([^/]+)\/([^/]+)\.json$/);
     if (lessonMatch) {
       const [, level, lessonSlug] = lessonMatch;
       if (!corpus.lessons[level]) corpus.lessons[level] = {};

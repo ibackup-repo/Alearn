@@ -133,7 +133,7 @@ export function Use_Game_Actions({
 
   const resign = useCallback(() => {
     const s = State_Reference.current;
-    if (!s || s.game.Is_Game_Over()) return;
+    if (!s || s.game.isGameOver()) return;
     s.resigned = true;
     force(n => n + 1);
   }, [State_Reference, force]);

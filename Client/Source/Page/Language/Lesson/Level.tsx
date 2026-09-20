@@ -1,18 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Lock, Star } from "lucide-react";
-import { CardButton } from "@/Component/UI/card-button";
+import { Button } from "@/Component/UI/button";
 import { cn } from "@/Library/Utility";
 import { toast } from "@/Component/UI/use-toast";
 import { Supported_Language, Lesson_Record } from "@/Library/Language-Types";
 import { Get_Lessons_List } from "@/Library/Language-API";
 import { Get_Mastery, Is_Unlocked, Lesson_ID, Subscribe_Mastery } from "@/Library/Lesson-Mastery";
 
-const GRID = "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 w-full";
-const CARD = "min-h-[64px] sm:min-h-[56px] py-3 px-3 sm:py-3.5 sm:px-4 flex items-center justify-between gap-2 text-left";
-
 function Title_From_Slug(slug: string): string {
-  return slug.split("-").filter(Boolean).map((w) => w[0].toUpperCase() + w.slice(1)).join(" ");
+  return slug
+    .split("-")
+    .filter(Boolean)
+    .map((w) => w[0].toUpperCase() + w.slice(1))
+    .join(" ");
 }
 
 function StarRow({ stars }: { stars: number }) {
@@ -32,15 +33,15 @@ interface LockableCardProps {
   title: string;
   locked: boolean;
   stars: number;
+  navigateTo: string;
   onOpen: () => void;
 }
 
-function LockableCard({ title, locked, stars, onOpen }: LockableCardProps) {
+function LockableCard({ title, locked, stars, navigateTo, onOpen }: LockableCardProps) {
   const [clicks, setClicks] = useState(0);
 
   const onClick = () => {
     if (!locked) {
-      onOpen();
       return;
     }
     const next = clicks + 1;
@@ -55,15 +56,23 @@ function LockableCard({ title, locked, stars, onOpen }: LockableCardProps) {
     }
   };
 
-  return (
-    <CardButton
-      onClick={onClick}
-      title={locked ? "Triple-click to bypass" : undefined}
-      className={cn(CARD, "transition-transform sm:hover:scale-[1.02]", locked && "opacity-60")}
-    >
+  const labelContent = (
+    <div className="flex items-center justify-between gap-2 w-full text-left">
       <span className="flex-1 font-semibold text-sm sm:text-base">{title}</span>
       {locked ? <Lock className="h-4 w-4" /> : <StarRow stars={stars} />}
-    </CardButton>
+    </div>
+  );
+
+  return (
+    <Button
+      Label={labelContent}
+      NavigateTo={locked ? undefined : navigateTo}
+      OnClick={onClick}
+      Height={64}
+      Color="#000000"
+      TextColor="#ffffff"
+      className={cn("w-full transition-transform sm:hover:scale-[1.02]", locked && "opacity-60")}
+    />
   );
 }
 
@@ -114,23 +123,27 @@ export default function Level_Page() {
   if (!lessons.length) return <div className="text-sm py-6 text-center opacity-60">No lessons in level {Level_Id}.</div>;
 
   return (
-    <div className={cn(GRID, "max-w-4xl mx-auto")}>
-      {lessons.map((l, i) => {
-        const id = Lesson_ID(Level_Id!, l.slug);
-        const prevId = i === 0 ? undefined : Lesson_ID(Level_Id!, lessons[i - 1].slug);
-        const locked = !Is_Unlocked(activeLang, id, prevId);
-        const mastery = Get_Mastery(activeLang, id);
+    <div className="px-8 py-4 w-full relative z-[60] max-w-8xl mx-auto">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 w-full">
+        {lessons.map((l, i) => {
+          const id = Lesson_ID(Level_Id!, l.slug);
+          const prevId = i === 0 ? undefined : Lesson_ID(Level_Id!, lessons[i - 1].slug);
+          const locked = !Is_Unlocked(activeLang, id, prevId);
+          const mastery = Get_Mastery(activeLang, id);
+          const targetUrl = `/Language/${activeLang}/Lesson/${Level_Id}/${l.slug}`;
 
-        return (
-          <LockableCard
-            key={l.slug}
-            title={l.title}
-            locked={locked}
-            stars={mastery.Stars}
-            onOpen={() => navigate(`/Language/${activeLang}/Lesson/${Level_Id}/${l.slug}`)}
-          />
-        );
-      })}
+          return (
+            <LockableCard
+              key={l.slug}
+              title={l.title}
+              locked={locked}
+              stars={mastery.Stars}
+              navigateTo={targetUrl}
+              onOpen={() => navigate(targetUrl)}
+            />
+          );
+        })}
+      </div>
     </div>
   );
 }

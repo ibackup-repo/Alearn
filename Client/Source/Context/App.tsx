@@ -16,6 +16,24 @@ export type Theme_Choice = "light" | "dark" | "system";
 export type Text_Size = "sm" | "md" | "lg";
 export type Filter_Type = "all" | "Marked" | "favorites" | "custom";
 
+// --- NIEUW: Types voor Button Customizatie ---
+export type ButtonVariant = "primary" | "secondary";
+export type ButtonState = "normal" | "hover" | "active";
+
+export interface ButtonStateConfig {
+  bgColor: string;
+  textColor: string;
+  borderRadius: number;
+  hasBorder: boolean;
+  borderColor: string;
+}
+
+export type ButtonCustomizationMap = {
+  [key in ButtonVariant]: {
+    [key in ButtonState]: ButtonStateConfig;
+  };
+};
+
 export interface Active_Recall {
   Scope: Recall_Scope;
   Category_ID: string;
@@ -36,6 +54,7 @@ interface App_State {
   theme: Theme_Choice;
   textSize: Text_Size;
   High_Contrast: boolean;
+  buttonCustomization: ButtonCustomizationMap; // NIEUW
   Recall_Queue: Recall_Item[];
   Browse_Path: string[];
   Active_Recall: Active_Recall | null;
@@ -62,6 +81,15 @@ interface App_Context_Type extends App_State {
   Set_Theme: (t: Theme_Choice) => void;
   Set_Text_Size: (t: Text_Size) => void;
   Set_High_Contrast: (v: boolean) => void;
+  
+  // NIEUW: Functie voor updaten van knop-customizaties
+  Update_Button_Customization: (
+    variant: ButtonVariant,
+    state: ButtonState,
+    key: keyof ButtonStateConfig,
+    value: any
+  ) => void;
+
   Add_Recall_Item: (item: Recall_Item) => void;
   Remove_Recall_Item: (id: string) => void;
   Set_Browse_Path: (path: string[]) => void;
@@ -77,13 +105,11 @@ interface App_Context_Type extends App_State {
   selected: Set<string>;
   Set_Selected: React.Dispatch<React.SetStateAction<Set<string>>>;
   
-  // Filter System Properties
   Filter_Open: boolean;
   Set_Filter_Open: (open: boolean) => void;
   Selected_Filter: Filter_Type; 
   Set_Selected_Filter: (filter: Filter_Type) => void;
   
-  // Aliases added to support both naming systems flawlessly
   filter: Filter_Type;
   setFilter: (filter: Filter_Type) => void;
 }
@@ -95,6 +121,20 @@ export function Use_App() {
   if (!ctx) throw new Error("Use_App must be inside App_Provider");
   return ctx;
 }
+
+// --- NIEUW: Standaardconfiguratie voor knoppen ---
+const Default_Button_Customization: ButtonCustomizationMap = {
+  primary: {
+    normal: { bgColor: "#ffffff", textColor: "#0f172a", borderRadius: 24, hasBorder: false, borderColor: "#ffffff" },
+    hover:  { bgColor: "#f1f5f9", textColor: "#0f172a", borderRadius: 24, hasBorder: false, borderColor: "#ffffff" },
+    active: { bgColor: "#e2e8f0", textColor: "#0f172a", borderRadius: 24, hasBorder: false, borderColor: "#ffffff" },
+  },
+  secondary: {
+    normal: { bgColor: "#1e293b", textColor: "#ffffff", borderRadius: 24, hasBorder: false, borderColor: "#334155" },
+    hover:  { bgColor: "#334155", textColor: "#ffffff", borderRadius: 24, hasBorder: false, borderColor: "#334155" },
+    active: { bgColor: "#475569", textColor: "#ffffff", borderRadius: 24, hasBorder: false, borderColor: "#334155" },
+  },
+};
 
 const Default_State: App_State = {
   Is_Authenticated: false,
@@ -108,6 +148,7 @@ const Default_State: App_State = {
   theme: "system",
   textSize: "md",
   High_Contrast: false,
+  buttonCustomization: Default_Button_Customization, // Standaard knop instellingen
   Recall_Queue: [],
   Browse_Path: [],
   Active_Recall: null,
@@ -137,7 +178,15 @@ export function App_Provider({ children }: { children: ReactNode }) {
         practiceScope, pathProgress, exerciseStats,
         ...clean
       } = parsed;
-      const merged: App_State = { ...Default_State, ...clean, Selected_Concept: "language" };
+      const merged: App_State = { 
+        ...Default_State, 
+        ...clean, 
+        Selected_Concept: "language",
+        // Zorg voor een fallback als de opgeslagen staat nog geen buttonCustomization bevat
+        buttonCustomization: clean.buttonCustomization 
+          ? { ...Default_Button_Customization, ...clean.buttonCustomization }
+          : Default_Button_Customization
+      };
       merged.courses = (merged.courses ?? []).filter((c: Course) => c.concept === "language");
       merged.Recall_Queue = Array.isArray(merged.Recall_Queue) ? merged.Recall_Queue : [];
       merged.Browse_Path = URL_Path ?? (Array.isArray(merged.Browse_Path) ? merged.Browse_Path : []);
@@ -322,6 +371,28 @@ export function App_Provider({ children }: { children: ReactNode }) {
   const Set_Text_Size = (textSize: Text_Size) => setState(s => ({ ...s, textSize }));
   const Set_High_Contrast = (High_Contrast: boolean) => setState(s => ({ ...s, High_Contrast }));
 
+  // --- NIEUW: Handler voor het updaten van knopeigenschappen ---
+  const Update_Button_Customization = (
+    variant: ButtonVariant,
+    stateKey: ButtonState,
+    key: keyof ButtonStateConfig,
+    value: any
+  ) => {
+    setState(s => ({
+      ...s,
+      buttonCustomization: {
+        ...s.buttonCustomization,
+        [variant]: {
+          ...s.buttonCustomization[variant],
+          [stateKey]: {
+            ...s.buttonCustomization[variant][stateKey],
+            [key]: value
+          }
+        }
+      }
+    }));
+  };
+
   const Add_Recall_Item = (item: Recall_Item) => setState(s => {
     const others = s.Recall_Queue.filter(r => r.id !== item.id);
     return { ...s, Recall_Queue: [...others, item] };
@@ -340,7 +411,6 @@ export function App_Provider({ children }: { children: ReactNode }) {
   const [Select_Mode, Set_Select_Mode] = useState<boolean>(false);
   const [selected, Set_Selected] = useState<Set<string>>(new Set());
   
-  // States for filter mechanism
   const [Filter_Open, Set_Filter_Open] = useState(false);
   const [Selected_Filter, Set_Selected_Filter] = useState<Filter_Type>("all");
 
@@ -360,6 +430,7 @@ export function App_Provider({ children }: { children: ReactNode }) {
       Set_Learning_Language, Complete_Introduction, Add_Course, Set_Active_Course,
       Get_Review, Record_Review, Remove_Course,
       Set_Theme, Set_Text_Size, Set_High_Contrast,
+      Update_Button_Customization, // EXPOSED
       Add_Recall_Item, Remove_Recall_Item,
       Set_Browse_Path, Push_Browse, Pop_Browse, Reset_Browse, Set_Active_Recall, Set_Recall_Return_Path,
       Filter_Open,
@@ -367,7 +438,6 @@ export function App_Provider({ children }: { children: ReactNode }) {
       Selected_Filter,
       Set_Selected_Filter,
       
-      // EXPOSING ALIASES
       filter: Selected_Filter,
       setFilter: Set_Selected_Filter,
     }}>

@@ -30,7 +30,7 @@ export function useChessEngine({
 }: UseChessEngineArgs) {
   const Run_Engine = useCallback(async () => {
     const s = State_Reference.current;
-    if (!s || s.game.Is_Game_Over()) return;
+    if (!s || s.game.isGameOver()) return;
     if (s.game.turn() === s.Player_Color) return;
     const FEN_Before = s.game.fen();
     const Elo = s.cfg.Elo;

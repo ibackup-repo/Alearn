@@ -3,12 +3,10 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Chessboard } from "@/Component/Chess/Chessboard";
 import { Button } from "@/Component/UI/Button";
 import { Container } from "@/Component/UI/container";
-import { ChevronRight, Lock, Star } from "lucide-react";
+import { ChevronRight, Star } from "lucide-react";
 import { Use_Course_Language } from "@/Hook/Use-Course-Language";
 import { Use_Chess_Settings } from "@/Library/Chess-Settings";
-import { Fetch_Chess_Levels } from "@/Library/Chess-API";
 import {
-  Chess_Level,
   Chess_Group,
   Chess_Lesson,
   Placed_Piece,
@@ -17,117 +15,37 @@ import {
   Arrow
 } from "@/Library/Chess-Types";
 import { Parse_Lesson_Step } from "@/Component/Parser/Chess/Learn-To-Play";
+import { useChessData } from "./Shared";
 
-export type International_Language = "Dutch" | "English" | "Arabic";
-
-// Client-side local engines / ambient definitions
 declare const isLegalMove: (type: Piece_Type, from: string, to: string, Would_Capture: boolean) => boolean;
 declare const reachableSquares: (type: Piece_Type, square: string) => string[];
 
-const Grid_Class = "grid grid-cols-2 gap-3 w-full px-4";
-const Card_Class = "min-h-[64px] py-3 px-3 flex items-center justify-center text-center text-base";
-
-type Empty_Kind = "subcategories" | "words" | "groups" | "lessons" | "puzzles";
-
-const Empty_Messages: Record<Empty_Kind, Record<International_Language, string>> = {
-  subcategories: {
-    Dutch:   "Deze categorie is leeg. Voeg subcategorieën of woorden toe.",
-    English: "This Category is empty. Add subcategories or words.",
-    Arabic:  "هذه الفئة فارغة. أضف فئات فرعية أو كلمات.",
-  },
-  words: {
-    Dutch:   "Geen woorden hier. Tik op + om er een toe te voegen.",
-    English: "No words here. Tap + to add one.",
-    Arabic:  "لا توجد كلمات هنا. اضغط + للإضافة.",
-  },
-  groups: {
-    Dutch:   "Dit niveau is nog leeg. Binnenkort meer lessen.",
-    English: "This level is empty. More lessons coming soon.",
-    Arabic:  "هذا المستوى فارغ. قريباً المزيد من الدروس.",
-  },
-  lessons: {
-    Dutch:   "Deze groep is nog leeg. Binnenkort meer lessen.",
-    English: "Deze groep is leeg. More lessons coming soon.",
-    Arabic:  "هذه المجموعة فارغة. قريباً المزيد من الدروس.",
-  },
-  puzzles: {
-    Dutch:   "Geen tactische puzzels gevonden.",
-    English: "No tactical puzzles found.",
-    Arabic:  "لم يتم العثور على ألعاب ألغاز.",
-  }
-};
-
-function Empty_State({ UI_Language, Kind }: { UI_Language: International_Language; Kind: Empty_Kind }) {
-  return (
-    <div className="px-4 w-full">
-      <Container className="p-6 text-center text-sm opacity-70">
-        {Empty_Messages[Kind][UI_Language] ?? Empty_Messages[Kind].English}
-      </Container>
-    </div>
-  );
-}
-
-/**
- * Strips leading ordering prefixes like "1-", "02-", "3_" from names
- * e.g., "3-The-Bishop" => "The-Bishop"
- */
-function Clean_Display_Name(Name: string | undefined): string {
-  if (!Name) return "";
-  return Name.replace(/^\d+[\s_-]*/, "");
-}
+type Lesson_Phase = "intro" | "play" | "done";
 
 function Resolve_Lesson_Text(Key_Or_Text: string | undefined, _Lang: string): string {
   if (!Key_Or_Text) return "";
   return Key_Or_Text;
 }
 
-type Lesson_Phase = "intro" | "play" | "done";
-
-export function Chess_Lesson_View() {
+export function Chess_Lesson_Runner_View() {
   const { Category, subcategory, Lesson_ID } = useParams();
   const Navigate = useNavigate();
-  const { UI_Language, International_Language, t } = Use_Course_Language();
+  const { UI_Language } = Use_Course_Language();
   const [Settings] = Use_Chess_Settings();
+  const { Corpus_Levels, Loading, Mark_Lesson_Complete } = useChessData();
 
-  const [Corpus_Levels, Set_Corpus_Levels] = useState<Chess_Level[]>([]);
-  const [Loading, Set_Loading] = useState<boolean>(true);
-
-  // Completed lessons tracker stored in local state/storage
-  const [Completed_Lessons, Set_Completed_Lessons] = useState<Set<string>>(() => {
-    try {
-      const Saved = localStorage.getItem("chess_completed_lessons");
-      return Saved ? new Set(JSON.parse(Saved)) : new Set();
-    } catch {
-      return new Set();
-    }
-  });
-
-  const Mark_Lesson_Complete = (ID: string) => {
-    Set_Completed_Lessons((Prev) => {
-      const Updated = new Set(Prev).add(ID);
-      try {
-        localStorage.setItem("chess_completed_lessons", JSON.stringify([...Updated]));
-      } catch (Error) {
-        console.error("Failed to persist lesson progress:", Error);
-      }
-      return Updated;
-    });
-  };
-
-  useEffect(() => {
-    Fetch_Chess_Levels()
-      .then((Levels) => {
-        if (Array.isArray(Levels)) {
-          Set_Corpus_Levels(Levels);
-        }
-      })
-      .catch((Error) => console.error("Corpus error:", Error))
-      .finally(() => Set_Loading(false));
-  }, []);
-
-  const Current_Lvl = useMemo(() => Corpus_Levels.find((L) => L.id === Category?.toLowerCase()), [Corpus_Levels, Category]);
-  const Current_Grp = useMemo(() => Current_Lvl?.groups?.find((G: Chess_Group) => G.id === subcategory), [Current_Lvl, subcategory]);
-  const Lesson_Entry = useMemo(() => Current_Grp?.lessons?.find((L: Chess_Lesson) => L.id === Lesson_ID), [Current_Grp, Lesson_ID]);
+  const Current_Lvl = useMemo(
+    () => Corpus_Levels.find((L) => L.id === Category?.toLowerCase()),
+    [Corpus_Levels, Category]
+  );
+  const Current_Grp = useMemo(
+    () => Current_Lvl?.groups?.find((G: Chess_Group) => G.id === subcategory),
+    [Current_Lvl, subcategory]
+  );
+  const Lesson_Entry = useMemo(
+    () => Current_Grp?.lessons?.find((L: Chess_Lesson) => L.id === Lesson_ID),
+    [Current_Grp, Lesson_ID]
+  );
 
   const Parsed_Lesson = useMemo(() => {
     if (!Category || !subcategory || !Lesson_ID || !Lesson_Entry) return null;
@@ -145,7 +63,6 @@ export function Chess_Lesson_View() {
   const [Can_Advance, Set_Can_Advance] = useState(false);
   const [Pulse, Set_Pulse] = useState(1);
 
-  // Target sequence calculations for next step/lesson
   const Next_Lesson_Route = useMemo(() => {
     if (!Current_Grp || !Lesson_Entry) return null;
     const Current_Index = Current_Grp.lessons.findIndex((L: Chess_Lesson) => L.id === Lesson_Entry.id);
@@ -178,13 +95,11 @@ export function Chess_Lesson_View() {
     }
   }, [Parsed_Lesson]);
 
-  // Handle immediate navigation on lesson completion
   useEffect(() => {
     if (Phase !== "done" || !Lesson_Entry) return;
 
     Mark_Lesson_Complete(Lesson_Entry.id);
 
-    // Skip completion modal: go directly to next lesson or subcategory slug
     if (Next_Lesson_Route) {
       Navigate(Next_Lesson_Route, { replace: true });
     } else {
@@ -192,7 +107,6 @@ export function Chess_Lesson_View() {
     }
   }, [Phase, Lesson_Entry, Next_Lesson_Route, Navigate, Category, subcategory]);
 
-  // Arrow animation Pulse logic
   useEffect(() => {
     if (Phase !== "intro" || !Parsed_Lesson) return;
     let Frame_ID = 0;
@@ -206,7 +120,6 @@ export function Chess_Lesson_View() {
     return () => cancelAnimationFrame(Frame_ID);
   }, [Phase, Parsed_Lesson]);
 
-  // Intro narration handler
   useEffect(() => {
     if (Phase !== "intro" || !Parsed_Lesson) return;
     Set_Can_Advance(false);
@@ -266,7 +179,6 @@ export function Chess_Lesson_View() {
       Next_Set.add(To);
       Set_Captured(Next_Set);
 
-      // Trigger completion phase immediately once all sequence Stars are Captured
       if (Stars.every((S) => Next_Set.has(S))) {
         Set_Phase("done");
       }
@@ -295,98 +207,12 @@ export function Chess_Lesson_View() {
   }, [Phase, Selected, Piece, Extras, Stars]);
 
   if (Loading) {
-    return <div className="text-sm py-12 text-center opacity-60">Synchronizing lessons...</div>;
+    return <div className="text-sm py-12 text-center opacity-60">Synchronizing lesson...</div>;
   }
 
-  // ── VIEW 1: Pick Category Level ──
-  if (!Category) {
-    if (Corpus_Levels.length === 0) return <Empty_State UI_Language={International_Language} Kind="groups" />;
-
-    return (
-      <div className={Grid_Class}>
-        {Corpus_Levels.map((Lvl, Index) => {
-          const Is_Unlocked = Index === 0 || Completed_Lessons.size > 0;
-          const Raw_Name = Lvl.name[International_Language] ?? Lvl.name.English ?? Lvl.id;
-          const Display_Name = Clean_Display_Name(Raw_Name);
-
-          return (
-            <Button
-              key={Lvl.id}
-              disabled={!Is_Unlocked}
-              onClick={() => Is_Unlocked && Navigate(`/Chess/Lesson/${Lvl.id}`)}
-              className={Card_Class}
-            >
-              <span className="font-semibold">{Display_Name}</span>
-              {!Is_Unlocked && <Lock className="h-4 w-4 ml-1.5 shrink-0 opacity-70" />}
-            </Button>
-          );
-        })}
-      </div>
-    );
-  }
-
-  // ── VIEW 2: Pick Subcategory ──
-  if (!subcategory) {
-    if (!Current_Lvl) return <div className="px-4 text-sm py-6 text-center opacity-60">{t("notFound")}</div>;
-    if (!Current_Lvl.groups || Current_Lvl.groups.length === 0) return <Empty_State UI_Language={International_Language} Kind="groups" />;
-
-    return (
-      <div className={Grid_Class}>
-        {Current_Lvl.groups.map((G: Chess_Group, Index: number) => {
-          const Is_Unlocked = Index === 0 || Completed_Lessons.size > 0;
-          const Raw_Name = G.name[International_Language] ?? G.name.English ?? G.id;
-          const Display_Name = Clean_Display_Name(Raw_Name);
-
-          return (
-            <Button
-              key={G.id}
-              disabled={!Is_Unlocked}
-              onClick={() => Is_Unlocked && Navigate(`/Chess/Lesson/${Category}/${G.id}`)}
-              className={Card_Class}
-            >
-              <span className="font-semibold">{Display_Name}</span>
-              {!Is_Unlocked && <Lock className="h-4 w-4 ml-1.5 shrink-0 opacity-70" />}
-            </Button>
-          );
-        })}
-      </div>
-    );
-  }
-
-  // ── VIEW 3: Pick Lesson ──
-  if (!Lesson_ID) {
-    if (!Current_Grp) return <div className="px-4 text-sm py-6 text-center opacity-60">{t("notFound")}</div>;
-    if (!Current_Grp.lessons || Current_Grp.lessons.length === 0) return <Empty_State UI_Language={International_Language} Kind="lessons" />;
-
-    return (
-      <div className={Grid_Class}>
-        {Current_Grp.lessons.map((LS: Chess_Lesson, Index: number) => {
-          const Prev_Lesson = Current_Grp.lessons[Index - 1];
-          // Unlock rule: First lesson is unlocked; otherwise previous lesson must be completed
-          const Is_Unlocked = Index === 0 || (Prev_Lesson && Completed_Lessons.has(Prev_Lesson.id));
-          const Raw_Name = LS.name[International_Language] ?? LS.name.English ?? LS.id;
-          const Display_Name = Clean_Display_Name(Raw_Name);
-
-          return (
-            <Button
-              key={LS.id}
-              disabled={!Is_Unlocked}
-              onClick={() => Is_Unlocked && Navigate(`/Chess/Lesson/${Category}/${subcategory}/${LS.id}`)}
-              className={Card_Class}
-            >
-              <span className="font-semibold">{Display_Name}</span>
-              {!Is_Unlocked && <Lock className="h-4 w-4 ml-1.5 shrink-0 opacity-70" />}
-            </Button>
-          );
-        })}
-      </div>
-    );
-  }
-
-  // ── VIEW 4: Interactive Lesson Engine ──
   if (!Parsed_Lesson || !Piece) {
     return (
-      <div className="px-4 text-center p-8 space-y-3">
+      <div className="px-4 text-center p-8 space-y-3 z-50">
         <p className="text-sm text-destructive">Could not load lesson.</p>
       </div>
     );

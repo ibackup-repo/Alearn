@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Chess } from "chess.js";
 import { Chessboard } from "@/Component/Chess/Chessboard";
 import { Container } from "@/Component/UI/container";
-import { Button } from "@/Component/UI/Button";
+import { Button } from "@/Component/UI/button";
 import { Chess_Setup_Panel, type Game_Config } from "@/Component/Chess/Chess-Setup-Panel";
 import { Piece_Tracker } from "@/Component/Chess/Chess-Helpers";
 import { Use_Chess_Settings } from "@/Library/Chess-Settings";
@@ -114,7 +114,7 @@ export function Chess_Play_View() {
     if (!cfg || cfg.timer.Base_MS === 0) return;
     const id = window.setInterval(() => {
       const s = State_Reference.current;
-      if (!s || s.game.Is_Game_Over()) return;
+      if (!s || s.game.isGameOver()) return;
       const now = performance.now();
       const delta = now - Last_Tick_Reference.current;
       Last_Tick_Reference.current = now;
@@ -211,8 +211,8 @@ export function Chess_Play_View() {
 
   if (!cfg || !s) {
     return (
-      <div className="w-full flex-1 flex items-center justify-center p-4 max-w-6xl mx-auto min-h-0 h-full overflow-hidden">
-        <div className="w-full select-none overflow-y-auto max-h-full pr-1">
+      <div className="w-full py-4 px-4 flex flex-col gap-4 relative z-[100] flex-1 items-center justify-center max-w-6xl mx-auto min-h-0 h-full overflow-hidden">
+        <div className="w-full select-none max-h-full pr-1">
           <Chess_Setup_Panel onPlay={startGame} />
         </div>
       </div>
@@ -221,7 +221,6 @@ export function Chess_Play_View() {
 
   const orientation = s.Player_Color === "w" ? "white" : "black";
   const isResigned = s.resigned === true;
-  const Is_Game_Over = s.game.Is_Game_Over() || isResigned;
 
   const Top_Clock_Color: "w" | "b" = orientation === "white" ? "b" : "w";
   const Bottom_Clock_Color: "w" | "b" = orientation === "white" ? "w" : "b";
@@ -268,7 +267,7 @@ export function Chess_Play_View() {
     s,
     Show_Clocks,
     orientation,
-    Is_Game_Over,
+    Is_Game_Over: s.game.isGameOver() || isResigned,
     turn,
     Clock_MS,
     Top_Clock_Color,
@@ -299,15 +298,15 @@ export function Chess_Play_View() {
       ref={(node) => {
         Set_Container_Ref(node);
       }}
-      className="w-full h-[100dvh] max-h-[100dvh] flex flex-col justify-center items-center p-2 overflow-hidden select-none min-h-0 min-w-0 box-border"
+      className="w-full pb-[16px] min-[960px]:pt-[0px] min-[960px]:pb-[16px] min-[960px]:px-[16px] flex flex-col relative z-[100] h-[calc(100dvh-72px)] max-h-[calc(100dvh-72px)] justify-center items-center overflow-hidden select-none min-h-0 min-w-0 box-border"
     >
       {/* ── 1. DESKTOP VIEW (>= 960px) ── */}
-      <div className="hidden min-[960px]:flex flex-row items-center justify-center w-full h-full max-w-7xl mx-auto gap-4 min-h-0 min-w-0 overflow-hidden">
-        <div className="[container-type:size] h-full flex-1 min-h-0 min-w-0 flex items-center justify-center overflow-hidden">
-          <div className="w-[min(100cqw,100cqh)] h-[min(100cqw,100cqh)] flex items-stretch gap-2 justify-center relative min-h-0 min-w-0">
+      <div className="hidden min-[960px]:flex flex-row items-center justify-center w-full h-full max-w-7xl mx-auto min-h-0 min-w-0 overflow-hidden">
+        <div className="[container-type:size] h-full flex-1 min-h-0 min-w-0 flex items-center justify-center pl-2 py-2 overflow-hidden shrink">
+          <div className="w-[min(100cqw,100cqh)] h-[min(100cqw,100cqh)] max-w-full max-h-full flex items-stretch gap-2 justify-center relative min-h-0 min-w-0 shrink">
             {Eval_Score !== null && Analysis_View !== "analysis" && <Eval_Bar score={Eval_Score} />}
             <div
-              className={`p-0 rounded-[20px] h-full w-full aspect-square relative overflow-hidden transition-all ${
+              className={`p-0 rounded-[20px] h-full w-full max-h-full max-w-full aspect-square relative overflow-hidden transition-all shrink min-h-0 min-w-0 ${
                 reviewing ? "brightness-105 contrast-[1.02]" : ""
               }`}
             >
@@ -335,64 +334,76 @@ export function Chess_Play_View() {
           </div>
         </div>
 
-        <div className="flex-1 min-w-0 max-w-[384px] h-full min-h-0 shrink overflow-hidden">
+        <div className="flex-1 min-w-0 max-w-[384px] h-full min-h-0 shrink overflow-hidden flex flex-col">
           <Right_Panel {...Common_Right_Panel_Properties} Layout_Mode="vertical" />
         </div>
       </div>
 
       {/* ── 2. MOBILE & TABLET VIEW (< 960px) ── */}
-      <div className="flex max-[959px]:flex min-[960px]:hidden flex-col items-center justify-center w-full h-full min-h-0 min-w-0 gap-1.5 p-1 mx-auto overflow-hidden">
-        <div className="w-full flex-1 flex flex-col items-center justify-center min-h-0 min-w-0 overflow-hidden gap-1">
-          {/* Top Player Info Bar */}
-          <div className="w-full max-w-lg flex items-center justify-between px-2 py-1 shrink-0 rounded-lg bg-accent/20 border border-border/40 text-xs">
-            <span className="opacity-70 italic font-medium">[ Top Player Info Placeholder ]</span>
+      <div className="flex max-[959px]:flex min-[960px]:hidden flex-col items-center w-full h-full min-h-0 min-w-0 gap-1.5 mx-auto overflow-hidden">
+        
+        {/* Opponent Clock (bovenaan indien klok actief is) */}
+        {Show_Clocks && (
+          <div className="w-full max-w-lg flex items-center justify-between px-3 py-1 shrink-0 rounded-lg bg-zinc-900 border border-zinc-800 text-xs text-white">
+            <span className="font-semibold">Opponent</span>
+            <span className="font-mono bg-zinc-800 px-2 py-0.5 rounded text-zinc-200 font-bold">
+              {Format_Time(Clock_MS(Top_Clock_Color))}
+            </span>
           </div>
+        )}
 
-          {/* Board Container with Container Queries */}
-          <div className="[container-type:size] w-full flex-1 min-h-0 min-w-0 flex items-center justify-center overflow-hidden">
-            <div className="w-[min(100cqw,100cqh)] h-[min(100cqw,100cqh)] flex items-stretch gap-1.5 justify-center relative min-h-0 min-w-0">
-              {Eval_Score !== null && Analysis_View !== "analysis" && (
-                <Eval_Bar score={Eval_Score} />
-              )}
-              <div
-                className={`p-0 rounded-[16px] h-full w-full aspect-square relative overflow-hidden transition-all ${
-                  reviewing ? "brightness-105 contrast-[1.02]" : ""
-                }`}
-              >
-                <Chessboard
-                  pieces={Projected_Pieces ?? pieces}
-                  orientation={orientation}
-                  selected={selected}
-                  Legal_Squares={legal}
-                  Last_Move={Last_Move}
-                  onSquareClick={Handle_Square}
-                  onPieceDrop={(from, to) => On_Move(from, to, true)}
-                  onDragBegin={Handle_Drag_Begin}
-                  Input_Mode={settings.Input_Mode}
-                  arrows={Analysis_Arrows}
-                  interactive={true}
-                  animate={settings.Animate_Pieces && !No_Animate_Once}
-                  animationMs={settings.Animation_Speed}
-                  moveBadge={Review_Badge}
-                  Premove_Squares={Premove_Squares}
-                  onCancelPremoves={Cancel_Premoves}
-                  onClearSelection={Clear_Selection}
-                  interactiveColor={live ? s.Player_Color : View_Game.turn()}
-                />
-              </div>
+        {/* Schaakbord wrapper: 
+            items-end is de key hier! Dit duwt het hele vierkant naar de onderkant 
+            van de beschikbare (flex-1) ruimte, in plaats van te centreren. 
+        */}
+        <div className="w-full max-w-lg flex-1 min-h-0 flex flex-row items-end justify-center relative">
+          <div className="w-full aspect-square max-h-full flex flex-row items-stretch gap-1.5 justify-center relative shrink">
+            {Eval_Score !== null && Analysis_View !== "analysis" && (
+              <Eval_Bar score={Eval_Score} />
+            )}
+            <div
+              className={`p-0 h-full w-full aspect-square relative overflow-hidden transition-all shrink ${
+                reviewing ? "brightness-105 contrast-[1.02]" : ""
+              }`}
+            >
+              <Chessboard
+                pieces={Projected_Pieces ?? pieces}
+                orientation={orientation}
+                selected={selected}
+                Legal_Squares={legal}
+                Last_Move={Last_Move}
+                onSquareClick={Handle_Square}
+                onPieceDrop={(from, to) => On_Move(from, to, true)}
+                onDragBegin={Handle_Drag_Begin}
+                Input_Mode={settings.Input_Mode}
+                arrows={Analysis_Arrows}
+                interactive={true}
+                animate={settings.Animate_Pieces && !No_Animate_Once}
+                animationMs={settings.Animation_Speed}
+                moveBadge={Review_Badge}
+                Premove_Squares={Premove_Squares}
+                onCancelPremoves={Cancel_Premoves}
+                onClearSelection={Clear_Selection}
+                interactiveColor={live ? s.Player_Color : View_Game.turn()}
+              />
             </div>
-          </div>
-
-          {/* Bottom Player Info Bar */}
-          <div className="w-full max-w-lg flex items-center justify-between px-2 py-1 shrink-0 rounded-lg bg-accent/20 border border-border/40 text-xs">
-            <span className="opacity-70 italic font-medium">[ Bottom Player Info Placeholder ]</span>
           </div>
         </div>
 
-        {/* Mobile / Tablet Horizontal Move History */}
-        <Container className="w-full h-10 shrink-0 flex items-center gap-1.5 overflow-x-auto overflow-y-hidden px-2 py-1 text-xs whitespace-nowrap">
+        {/* You Panel (Bodem klokbalk) */}
+        <div className="w-full max-w-lg flex items-center justify-between px-3 py-1 shrink-0 rounded-lg bg-zinc-900 border border-zinc-800 text-xs text-white">
+          <span className="font-semibold">You</span>
+          {Show_Clocks && (
+            <span className="font-mono bg-zinc-800 px-2 py-0.5 rounded text-zinc-200 font-bold">
+              {Format_Time(Clock_MS(Bottom_Clock_Color))}
+            </span>
+          )}
+        </div>
+
+        {/* Move History */}
+        <Container className="w-full h-9 shrink-0 flex items-center gap-1.5 overflow-x-auto overflow-y-hidden px-2 py-1 text-xs whitespace-nowrap bg-black border-0">
           {s.sans.length === 0 ? (
-            <span className="opacity-50 italic px-2">Game started</span>
+            <span className="opacity-50 italic px-2 text-zinc-400">Game started</span>
           ) : (
             s.sans.map((move, Index) => {
               const Move_Numberber = Math.floor(Index / 2) + 1;
@@ -405,23 +416,23 @@ export function Chess_Play_View() {
               return (
                 <React.Fragment key={Index}>
                   {Is_White && (
-                    <span className="h-6 px-1.5 text-[10px] font-semibold opacity-60 shrink-0 flex items-center justify-center">
+                    <span className="h-6 px-1 text-[10px] font-semibold text-zinc-500 shrink-0 flex items-center justify-center">
                       {Move_Numberber}.
                     </span>
                   )}
                   <Button
-                    active={isSelected}
-                    onClick={() => {
+                    Label={move}
+                    Color={isSelected ? "#ffffff" : "#18181b"}
+                    TextColor={isSelected ? "#000000" : "#ffffff"}
+                    Height={24}
+                    OnClick={() => {
                       Set_No_Animate_Once(true);
                       Set_Variable_Cursor_External(null);
                       Set_View_Index(Index === s.sans.length - 1 ? -1 : Index);
                     }}
-                    className="h-6 px-2 text-xs shrink-0 font-normal"
-                  >
-                    <span>{move}</span>
-                  </Button>
+                    className="px-2 text-xs shrink-0 font-normal border-0"
+                  />
 
-                  {/* Variation Chips */}
                   {Node_Vars.length > 0 &&
                     Node_Vars.map((v, vIdx) => {
                       const Moves_List = v.sans || v.moves || [];
@@ -430,7 +441,7 @@ export function Chess_Play_View() {
                       return (
                         <div
                           key={vIdx}
-                          className="flex items-center gap-1 px-1.5 py-0.5 border border-border rounded-md bg-accent/30 shrink-0"
+                          className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-zinc-900 border border-zinc-800 shrink-0"
                         >
                           {Moves_List.map((m, mIdx) => {
                             const Var_Ply = v.Parent_Index + 1 + mIdx;
@@ -448,23 +459,24 @@ export function Chess_Play_View() {
                             return (
                               <React.Fragment key={mIdx}>
                                 {(mIdx === 0 || Is_W_Turn) && (
-                                  <span className="h-5 px-1 text-[9px] font-semibold opacity-60 shrink-0 flex items-center justify-center">
+                                  <span className="h-5 px-1 text-[9px] font-semibold text-zinc-500 shrink-0 flex items-center justify-center">
                                     {mNum}.
                                   </span>
                                 )}
                                 <Button
-                                  active={Is_Var_Selected}
-                                  onClick={() => {
+                                  Label={mSan}
+                                  Color={Is_Var_Selected ? "#ffffff" : "#27272a"}
+                                  TextColor={Is_Var_Selected ? "#000000" : "#ffffff"}
+                                  Height={20}
+                                  OnClick={() => {
                                     Set_No_Animate_Once(true);
                                     Set_Variable_Cursor_External({
                                       varIndex: Var_Idx_In_State,
                                       step: mIdx,
                                     });
                                   }}
-                                  className="h-5 px-1.5 text-[10px] shrink-0 font-normal"
-                                >
-                                  {mSan}
-                                </Button>
+                                  className="px-1.5 text-[10px] shrink-0 font-normal border-0"
+                                />
                               </React.Fragment>
                             );
                           })}
@@ -478,7 +490,7 @@ export function Chess_Play_View() {
           <div ref={Moves_End_Reference} />
         </Container>
 
-        {/* Mobile / Tablet Horizontal Controls Panel */}
+        {/* Controls Panel */}
         <div className="w-full shrink-0">
           <Right_Panel {...Common_Right_Panel_Properties} Show_Clocks={false} Layout_Mode="horizontal" />
         </div>

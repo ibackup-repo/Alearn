@@ -1,4 +1,3 @@
-// @/Component/Settings/SettingsSidebar.tsx
 import { useState } from "react";
 import { Use_App } from "@/Context/App";
 import { Use_Is_Mobile } from "@/Hook/Use-Mobile";
@@ -7,7 +6,8 @@ import { Mobile } from "./Layout/Mobile";
 import { ProfileSection } from "./Section/Profile";
 import { LanguageSection } from "./Section/Language";
 import { ChessSection } from "./Section/Chess"; 
-import { ThemeSection } from "./Section/Theme";
+import { General } from "./Section/Appearance/General";
+import { ButtonCustomizer } from "./Section/Appearance/Button";
 import { AccessibilitySection } from "./Section/Accessibility";
 import type { Settings_Category_ID } from "./Types";
 
@@ -28,6 +28,8 @@ export function SettingsSidebar() {
     Set_Active_Category(Category);
     if (Category === "profile") {
       Set_Active_Subcategory("account");
+    } else if (Category === "appearance") {
+      Set_Active_Subcategory("general");
     } else {
       Set_Active_Subcategory(null);
     }
@@ -45,12 +47,15 @@ export function SettingsSidebar() {
             Active_Subcategory={Active_Subcategory || "account"} 
           />
         );
+      case "appearance":
+        if (Active_Subcategory === "button") {
+          return <ButtonCustomizer />;
+        }
+        return <General />;
       case "language":
         return <LanguageSection On_Select={() => {}} />;
       case "chess":
         return <ChessSection />;
-      case "theme":
-        return <ThemeSection />;
       case "accessibility":
         return <AccessibilitySection />;
       default:

@@ -157,7 +157,7 @@ export function usePlayLogic({
         Try_Variation_Move(from, to, viaDrag);
         return;
       }
-      if (s.game.Is_Game_Over()) return;
+      if (s.game.isGameOver()) return;
       if (s.game.turn() !== s.Player_Color) {
         Queue_Premove(from, to, viaDrag);
         return;
@@ -170,7 +170,7 @@ export function usePlayLogic({
         Set_Hint_Arrow(null);
         if (viaDrag) Set_No_Animate_Once(true);
         force((n) => n + 1);
-        if (!s.game.Is_Game_Over() && s.cfg.engine) {
+        if (!s.game.isGameOver() && s.cfg.engine) {
           setTimeout(() => Run_EngineRef.current?.(), Engine_Reply_Delay_MS);
         }
       } catch {
@@ -235,7 +235,7 @@ export function usePlayLogic({
         return;
       }
 
-      if (s.game.Is_Game_Over()) return;
+      if (s.game.isGameOver()) return;
       const myTurn = s.game.turn() === s.Player_Color;
       const proj = myTurn ? null : Projected_Board;
       const piece = myTurn ? s.game.get(sq as any) : proj?.get(sq as any);
@@ -297,7 +297,7 @@ export function usePlayLogic({
 
   const Show_Hint = useCallback(() => {
     const s = State_Reference.current;
-    if (!s || s.game.Is_Game_Over() || s.game.turn() !== s.Player_Color) return;
+    if (!s || s.game.isGameOver() || s.game.turn() !== s.Player_Color) return;
     const best = Find_Best_Move(s.game, 2).move;
     if (best) Set_Hint_Arrow({ from: best.from, to: best.to });
   }, [State_Reference, Set_Hint_Arrow]);

@@ -1,5 +1,4 @@
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/Component/UI/Button";
+import { Button } from "@/Component/UI/button";
 import { Use_Course_Language } from "@/Hook/Use-Course-Language";
 
 export type International_Language = "Dutch" | "English" | "Arabic";
@@ -11,30 +10,28 @@ const CHESS_MENU_LABELS: Record<string, Record<International_Language, string>> 
 };
 
 const GRID_CLASS = "grid grid-cols-2 gap-3 w-full px-4";
-const CARD_CLASS = "min-h-[64px] py-3 px-3 flex items-center justify-center text-center text-base";
 
 export default function Chess_Index() {
-  const navigate = useNavigate(); // Hook to change browser URL
   const { International_Language } = Use_Course_Language();
 
-  const Handle_Menu_Click = (id: string) => {
-    // Capitalized to match your React Router path definitions (/Chess/Play, /Chess/Puzzle, /Chess/Lesson)
-    const route = id.charAt(0).toUpperCase() + id.slice(1);
-    navigate(`/Chess/${route}`);
-  };
-
   return (
-    <div className="w-full flex flex-col gap-4">
+    <div className="w-full py-4 px-4 flex flex-col gap-4 relative z-[49]">
       <div className={GRID_CLASS}>
-        {Object.entries(CHESS_MENU_LABELS).map(([id, labels]) => (
-          <Button 
-            key={id} 
-            onClick={() => Handle_Menu_Click(id)} 
-            className={CARD_CLASS}
-          >
-            <span className="font-semibold">{labels[International_Language] ?? labels.English}</span>
-          </Button>
-        ))}
+        {Object.entries(CHESS_MENU_LABELS).map(([id, labels]) => {
+          const route = id.charAt(0).toUpperCase() + id.slice(1);
+          const labelText = labels[International_Language] ?? labels.English;
+
+          return (
+            <Button
+              key={id}
+              Label={labelText}
+              NavigateTo={`/Chess/${route}`}
+              Height={64}
+              Color="#000000"
+              TextColor="#ffffff"
+            />
+          );
+        })}
       </div>
     </div>
   );

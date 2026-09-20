@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Chessboard } from "@/Component/Chess/Chessboard";
 import { Container } from "@/Component/UI/container";
 import { Button } from "@/Component/UI/Button";
@@ -131,6 +131,20 @@ export function Chess_Puzzle_View({ puzzle: Prop_Puzzle, FEN_ID, On_Solved }: Ch
   const [Fetched_Payload, Set_Fetched_Payload] = useState<Puzzle_Payload | null>(null);
   const [Is_Loading, Set_Is_Loading] = useState<boolean>(false);
 
+  // Reference for cleaning up timeouts on reset or unmount
+  const Opponent_Timeout_Ref = useRef<number | null>(null);
+
+  const Clear_Opponent_Timeout = () => {
+    if (Opponent_Timeout_Ref.current !== null) {
+      window.clearTimeout(Opponent_Timeout_Ref.current);
+      Opponent_Timeout_Ref.current = null;
+    }
+  };
+
+  useEffect(() => {
+    return () => Clear_Opponent_Timeout();
+  }, []);
+
   const Derived_ID = useMemo(() => {
     if (FEN_ID) return FEN_ID;
     if (typeof window !== "undefined") {
@@ -140,7 +154,7 @@ export function Chess_Puzzle_View({ puzzle: Prop_Puzzle, FEN_ID, On_Solved }: Ch
     return "";
   }, [FEN_ID]);
 
-  // Fetch puzzle using Fetch_Puzzle_By_FEN from Chess-API if no direct payload was provided
+  // Fetch puzzle using Fetch_Puzzle_By_FEN
   useEffect(() => {
     if (!Derived_ID || Prop_Puzzle) return;
 
@@ -166,7 +180,6 @@ export function Chess_Puzzle_View({ puzzle: Prop_Puzzle, FEN_ID, On_Solved }: Ch
   }, [Derived_ID, Prop_Puzzle]);
 
   const Active_Puzzle = Prop_Puzzle ?? Fetched_Payload;
-
   const Decoded = useMemo(() => Decode_FEN_ID(Derived_ID), [Derived_ID]);
 
   const Moves: string[] = useMemo(() => {
@@ -184,6 +197,7 @@ export function Chess_Puzzle_View({ puzzle: Prop_Puzzle, FEN_ID, On_Solved }: Ch
   const [Selected, Set_Selected] = useState<string | null>(null);
 
   useEffect(() => {
+    Clear_Opponent_Timeout();
     Set_Pieces(Decoded?.pieces ?? []);
     Set_Step(0);
     Set_Last_Move(null);
@@ -239,7 +253,8 @@ export function Chess_Puzzle_View({ puzzle: Prop_Puzzle, FEN_ID, On_Solved }: Ch
     const Next_Step_Index = Step + 1;
 
     if (Next_Step_Index < Moves.length) {
-      window.setTimeout(() => {
+      Clear_Opponent_Timeout();
+      Opponent_Timeout_Ref.current = window.setTimeout(() => {
         Set_Pieces((Prev_Pieces) => {
           const Opponent_Result = Apply_Uci(Moves[Next_Step_Index], Prev_Pieces);
           Set_Last_Move({ from: Opponent_Result.from, to: Opponent_Result.to });
@@ -269,6 +284,7 @@ export function Chess_Puzzle_View({ puzzle: Prop_Puzzle, FEN_ID, On_Solved }: Ch
   };
 
   const Reset_Puzzle = () => {
+    Clear_Opponent_Timeout();
     Set_Pieces(Decoded?.pieces ?? []);
     Set_Step(0);
     Set_Last_Move(null);
@@ -278,7 +294,7 @@ export function Chess_Puzzle_View({ puzzle: Prop_Puzzle, FEN_ID, On_Solved }: Ch
 
   if (Is_Loading) {
     return (
-      <div className="px-4 max-w-md mx-auto py-8">
+      <div className="px-4 max-w-md mx-auto py-8 z-50">
         <Container className="p-6 text-center text-sm opacity-70">
           {UI_Language === "nl" ? "Laden..." : UI_Language === "ar" ? "جار التحميل..." : "Loading..."}
         </Container>
@@ -288,7 +304,7 @@ export function Chess_Puzzle_View({ puzzle: Prop_Puzzle, FEN_ID, On_Solved }: Ch
 
   if (!Decoded) {
     return (
-      <div className="px-4 max-w-md mx-auto py-8">
+      <div className="px-4 max-w-md mx-auto py-8 z-50">
         <Container className="p-6 text-center text-sm opacity-70">
           {UI_Language === "nl" ? "Kon puzzel niet laden." : UI_Language === "ar" ? "تعذّر تحميل اللغز." : "Could not load puzzle."}
         </Container>
@@ -304,12 +320,14 @@ export function Chess_Puzzle_View({ puzzle: Prop_Puzzle, FEN_ID, On_Solved }: Ch
     : (UI_Language === "nl" ? "Zwart aan zet — vind de beste zet." : UI_Language === "ar" ? "الأسود يلعب — جد أفضل نقلة." : "Black to move — find the best move.");
 
   return (
-    <div className="px-4 w-full">
-      <div className="grid gap-3 md:grid-cols-[1fr_260px] max-w-5xl mx-auto">
-        <div className="flex justify-center">
+    <div className="px-4 w-full my-4">
+      <div className="grid gap-6 md:grid-cols-[1fr_280px] max-w-5xl mx-auto items-start">
+        
+        {/* Schaakbord Container met isolate & correcte z-index & desktop sizing */}
+        <div className="flex justify-center isolate relative z-10 w-full min-w-0">
           <Container
-            className={`p-2 rounded-[20px] w-full max-w-[min(100%,calc(100svh-18rem))] md:max-w-none transition-all ${
-              Wrong ? "ring-2 ring-destructive" : ""
+            className={`p-2 rounded-[20px] w-full max-w-[min(100%,calc(100svh-18rem))] md:max-w-[560px] aspect-square transition-all duration-200 ${
+              Wrong ? "ring-2 ring-destructive shadow-lg scale-[0.99]" : ""
             }`}
           >
             <Chessboard
@@ -341,26 +359,53 @@ export function Chess_Puzzle_View({ puzzle: Prop_Puzzle, FEN_ID, On_Solved }: Ch
           </Container>
         </div>
 
-        <div className="flex flex-col gap-3">
-          <Container className="p-3 text-sm space-y-1">
-            <p className="font-semibold">{Title_Text}</p>
-            <p className="opacity-70">{Prompt_Text}</p>
-            <p className="text-xs opacity-60 tabular-nums">
-              {Step}/{Moves.length}
+        {/* Zijpaneel met informatie en UI Buttons */}
+        <div className="flex flex-col gap-3 relative z-0 w-full">
+          <Container className="p-4 text-sm space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="font-semibold text-base">{Title_Text}</p>
+              <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-muted font-medium">
+                {Step}/{Moves.length}
+              </span>
+            </div>
+
+            <p className={`text-sm transition-colors ${Is_Solved ? "text-emerald-600 font-medium" : "opacity-80"}`}>
+              {Prompt_Text}
             </p>
+
+            {/* Voortgangsbalk */}
+            <div className="w-full bg-muted h-1.5 rounded-full overflow-hidden mt-2">
+              <div
+                className="bg-primary h-full transition-all duration-300 ease-out"
+                style={{ width: `${Moves.length > 0 ? (Step / Moves.length) * 100 : 0}%` }}
+              />
+            </div>
           </Container>
 
-          <div className="flex gap-2">
-            <Button variant="outline" className="flex-1" onClick={Reset_Puzzle}>
-              {UI_Language === "nl" ? "Opnieuw" : UI_Language === "ar" ? "إعادة" : "Reset"}
+          {/* Actie-knoppen */}
+          <div className="flex flex-col gap-2">
+            <Button
+              variant="outline"
+              size="default"
+              className="w-full justify-center"
+              onClick={Reset_Puzzle}
+            >
+              {UI_Language === "nl" ? "Opnieuw proberen" : UI_Language === "ar" ? "إعادة المحاولة" : "Reset Puzzle"}
             </Button>
+
             {Is_Solved && On_Solved && (
-              <Button className="flex-1" onClick={On_Solved}>
-                {UI_Language === "nl" ? "Volgende" : UI_Language === "ar" ? "التالي" : "Next"}
+              <Button
+                variant="default"
+                size="default"
+                className="w-full justify-center animate-bounce"
+                onClick={On_Solved}
+              >
+                {UI_Language === "nl" ? "Volgende Puzzel" : UI_Language === "ar" ? "اللغز التالي" : "Next Puzzle"}
               </Button>
             )}
           </div>
         </div>
+
       </div>
     </div>
   );

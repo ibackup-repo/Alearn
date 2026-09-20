@@ -143,9 +143,13 @@ export const Right_Panel: React.FC<Right_Panel_Properties> = ({
     );
   };
 
+  // Horizontal (mobile/tablet) layout — lives inside a `shrink-0` wrapper in
+  // the parent, so it must size itself purely from padding, never margin.
+  // A hardcoded `mt-[64px]` here previously added height the parent flex
+  // column never budgeted for, which is what caused page-level scroll.
   if (Layout_Mode === "horizontal") {
     return (
-      <div className="flex items-center gap-1.5 w-full overflow-x-auto">
+      <div className="flex items-center gap-1.5 w-full overflow-x-auto relative z-50 px-4 py-2">
         {Render_Buttons()}
       </div>
     );
@@ -160,15 +164,23 @@ export const Right_Panel: React.FC<Right_Panel_Properties> = ({
 
   const Get_Move_SAN = (m: any): string => {
     if (!m) return "";
-    if (typeof m === "string") return m;
     if (typeof m === "object" && m.san) return m.san;
+    if (typeof m === "string") return m;
     return String(m);
   };
 
   const variations = s.variations || [];
 
+  // Vertical (desktop) layout — sits inside a `flex-1 min-h-0` column in the
+  // parent. Previously used `h-[calc(100%-80px)]` + `mt-[64px] mb-4` (margin
+  // sits outside the box model, so it wasn't included in that 100% the calc
+  // was measured against — it only "worked" by lucky arithmetic and broke as
+  // soon as the mobile branch reused the same margin without a matching
+  // calc). Now it just fills whatever height its flex parent gives it via
+  // `flex-1 min-h-0`, with `py-3`/`px-4` padding instead of margin so the
+  // reserved space is always counted correctly.
   return (
-    <div className="flex flex-col h-full justify-between gap-3 overflow-hidden">
+    <div className="flex flex-col flex-1 min-h-0 justify-between gap-3 overflow-hidden relative z-50 px-2 py-2">
       {Analysis_View === "analysis" && Per_Move ? (
         <div className="flex-1 min-h-0 overflow-y-auto">
           <Analysis_Report
@@ -252,7 +264,7 @@ export const Right_Panel: React.FC<Right_Panel_Properties> = ({
                       )}
                     </div>
 
-                    {/* Variations Container without side border or background color */}
+                    {/* Variations Container */}
                     {activeVars.length > 0 && (
                       <div className="ml-7 my-1 flex flex-col gap-1">
                         {activeVars.map((v, vIdx) => {
@@ -293,7 +305,6 @@ export const Right_Panel: React.FC<Right_Panel_Properties> = ({
                                     key={pIdx}
                                     className="grid grid-cols-[28px_1fr_1fr] gap-1.5 items-center"
                                   >
-                                    {/* Variation Move Number */}
                                     <Button
                                       variant="outline"
                                       size="sm"
@@ -303,7 +314,6 @@ export const Right_Panel: React.FC<Right_Panel_Properties> = ({
                                       {wNum}
                                     </Button>
 
-                                    {/* White Variation Move */}
                                     <Button
                                       variant="outline"
                                       size="sm"
@@ -319,7 +329,6 @@ export const Right_Panel: React.FC<Right_Panel_Properties> = ({
                                       {Get_Move_SAN(wVarMove)}
                                     </Button>
 
-                                    {/* Black Variation Move (if available) */}
                                     {bVarMove ? (
                                       <Button
                                         variant="outline"

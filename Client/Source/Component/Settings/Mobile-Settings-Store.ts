@@ -1,4 +1,3 @@
-// @/Component/Settings/Mobile-Settings-Store.ts
 type Listener = () => void;
 
 let title = "Settings";
@@ -10,7 +9,6 @@ let On_Exit_Search: (() => void) | null = null;
 let Search_Query = "";
 let Ignore_Sync = false;
 
-// Stack for nested modals (e.g., font picker)
 type Modal_State = {
   title: string;
   Show_Back: boolean;
@@ -40,17 +38,15 @@ export const Mobile_Settings_Store = {
     if (newIgnoreSync !== undefined) Ignore_Sync = newIgnoreSync;
     listeners.forEach(listener => listener());
   },
-  // Push a modal onto the stack (e.g., font picker)
-  Push_Modal(title: string, Show_Back: boolean, onBack: () => void, onClose: () => void) {
+  Push_Modal(newTitle: string, newShowBack: boolean, onBack: () => void, onClose: () => void) {
     Modal_Stack.push({
-      title: this.getState().title,
-      Show_Back: this.getState().Show_Back,
+      title,
+      Show_Back,
       goBack: Go_Back_Function || (() => {}),
       close: Close_Function || (() => {}),
     });
-    this.setState(title, Show_Back, onBack, onClose, true);
+    this.setState(newTitle, newShowBack, onBack, onClose, true);
   },
-  // Pop the modal and restore previous state
   Pop_Modal() {
     const prev = Modal_Stack.pop();
     if (prev) {
@@ -59,7 +55,6 @@ export const Mobile_Settings_Store = {
       this.setState("Settings", false, () => {}, () => {}, false);
     }
   },
-  // Search mode
   Enter_Search_Mode(onExit: () => void) {
     Is_Search_Mode = true;
     On_Exit_Search = onExit;
@@ -80,7 +75,6 @@ export const Mobile_Settings_Store = {
   Get_Search_Query() {
     return Search_Query;
   },
-  // FIXED: Fallback safety if the view components haven't bound hooks yet
   goBack() {
     if (Go_Back_Function) {
       Go_Back_Function();

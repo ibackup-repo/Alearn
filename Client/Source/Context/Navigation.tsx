@@ -1,85 +1,103 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { motion, useAnimate } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
-type Rect = { top: number; left: number; width: number; height: number };
+export interface TransitionItem {
+  activeRoute: string;
+  label?: string;
+  fromPath: string;
+  isVirtual?: boolean; // Nieuwe vlag voor paneel-only overlays
+}
+
+const PANEL_MARGIN = { top: 72, right: 16, bottom: 16, left: 16 };
+const STORAGE_KEY_STACK = "nav_transition_stack_multi";
 
 interface NavigationContextType {
-  activeRoute: string | null;
-  activeRect: Rect | null;
-  fromPath: string | null;
-  phase: "idle" | "expanding" | "expanded" | "shrinking";
-  triggerTransition: (route: string, rect: Rect) => void;
-  setPhase: (phase: "idle" | "expanding" | "expanded" | "shrinking") => void;
-  clearTransition: () => void;
+  stack: TransitionItem[];
+  triggerTransition: (activeRoute: string, label?: string, isVirtual?: boolean) => void;
+  closeTransition: () => void;
+  isRouteActive: (route: string) => boolean;
 }
 
 const NavigationContext = createContext<NavigationContextType | null>(null);
 
-const STORAGE_KEY_RECT = "nav_active_rect";
-const STORAGE_KEY_FROM = "nav_from_path";
-const STORAGE_KEY_ROUTE = "nav_active_route";
-
-// How long the "arrived and staying" state holds the overlay before it
-// clears itself. Should be >= the fade duration of the label span below.
-const ARRIVAL_HOLD_MS = 250;
-
 export function NavigationProvider({ children }: { children: React.ReactNode }) {
-  // Initialize state directly from sessionStorage so it survives page refreshes!
-  const [activeRoute, setActiveRoute] = useState<string | null>(() => sessionStorage.getItem(STORAGE_KEY_ROUTE));
-  const [fromPath, setFromPath] = useState<string | null>(() => sessionStorage.getItem(STORAGE_KEY_FROM));
-
-  const [activeRect, setActiveRect] = useState<Rect | null>(() => {
-    const stored = sessionStorage.getItem(STORAGE_KEY_RECT);
-    return stored ? JSON.parse(stored) : null;
-  });
-
-  const [phase, setPhase] = useState<"idle" | "expanding" | "expanded" | "shrinking">(() => {
-    const storedRoute = sessionStorage.getItem(STORAGE_KEY_ROUTE);
-    // If the user refreshed the page while on the target route, don't resurrect
-    // the fullscreen overlay — just drop straight to idle. Holding it "expanded"
-    // after a hard refresh is what caused the overlay to get stuck forever.
-    if (storedRoute && window.location.pathname === storedRoute) {
-      return "idle";
-    }
-    return "idle";
-  });
-
   const location = useLocation();
+  const navigate = useNavigate();
 
-  const triggerTransition = (route: string, rect: Rect) => {
+  const [stack, setStack] = useState<TransitionItem[]>(() => {
+    const stored = sessionStorage.getItem(STORAGE_KEY_STACK);
+    if (!stored) return [];
+    try {
+      const parsed: TransitionItem[] = JSON.parse(stored);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    sessionStorage.setItem(STORAGE_KEY_STACK, JSON.stringify(stack));
+  }, [stack]);
+
+  // Sync alleen echte pagina-routes met de browsergeschiedenis
+  useEffect(() => {
+    if (stack.length === 0) return;
+
     const currentPath = location.pathname;
-    setFromPath(currentPath);
-    setActiveRoute(route);
-    setActiveRect(rect);
-    setPhase("expanding");
+    
+    // Bepaal of de huidige URL overeenkomt met een niet-virtueel item
+    const matchingIndex = stack.findIndex(
+      (item) => !item.isVirtual && (item.activeRoute === currentPath || currentPath.startsWith(item.activeRoute))
+    );
 
-    sessionStorage.setItem(STORAGE_KEY_FROM, currentPath);
-    sessionStorage.setItem(STORAGE_KEY_ROUTE, route);
-    sessionStorage.setItem(STORAGE_KEY_RECT, JSON.stringify(rect));
+    if (matchingIndex === -1 && currentPath === stack[0]?.fromPath) {
+      // Als we terug zijn op de startpagina, leeg de stack
+      setStack([]);
+    }
+  }, [location.pathname]);
+
+  const triggerTransition = (activeRoute: string, label?: string, isVirtual: boolean = false) => {
+    const newItem: TransitionItem = {
+      activeRoute,
+      label,
+      fromPath: location.pathname,
+      isVirtual,
+    };
+
+    setStack((prev) => [...prev, newItem]);
+
+    // Alleen echt navigeren als het GEEN virtueel paneel is
+    if (!isVirtual) {
+      const targetPath = activeRoute.startsWith("/") ? activeRoute : `/${activeRoute}`;
+      navigate(targetPath);
+    }
   };
 
-  const clearTransition = () => {
-    setActiveRoute(null);
-    setActiveRect(null);
-    setFromPath(null);
-    setPhase("idle");
+  const closeTransition = () => {
+    setStack((prev) => {
+      const lastItem = prev[prev.length - 1];
+      const newStack = prev.slice(0, -1);
 
-    sessionStorage.removeItem(STORAGE_KEY_FROM);
-    sessionStorage.removeItem(STORAGE_KEY_ROUTE);
-    sessionStorage.removeItem(STORAGE_KEY_RECT);
+      // Als het gesloten item NIET virtueel was, navigeer terug naar het vorige pad
+      if (lastItem && !lastItem.isVirtual) {
+        const target = newStack.length > 0 ? newStack[newStack.length - 1].activeRoute : lastItem.fromPath || "/";
+        navigate(target);
+      }
+
+      return newStack;
+    });
   };
+
+  const isRouteActive = (route: string) => stack.some((item) => item.activeRoute === route);
 
   return (
     <NavigationContext.Provider
       value={{
-        activeRoute,
-        activeRect,
-        fromPath,
-        phase,
+        stack,
         triggerTransition,
-        setPhase,
-        clearTransition,
+        closeTransition,
+        isRouteActive,
       }}
     >
       {children}
@@ -92,142 +110,45 @@ export const useNavTransition = () => {
   if (!context) throw new Error("useNavTransition must be used within NavigationProvider");
   return context;
 };
-
 export function GlobalNavOverlay() {
-  const { activeRoute, activeRect, fromPath, phase, setPhase, clearTransition } = useNavTransition();
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [scope, animate] = useAnimate();
-
-  // This ref stops animations from triggering twice simultaneously
-  const isAnimating = useRef(false);
-
-  // 1. REACT ROUTER MONITOR: Watches for the Back Button, programmatic
-  //    navigation, or plain arrival-and-stay on the target route.
-  useEffect(() => {
-    if (phase !== "expanded") return;
-
-    if (location.pathname === fromPath) {
-      // User went back to the origin page -> Trigger shrink!
-      setPhase("shrinking");
-      return;
-    }
-
-    if (location.pathname !== activeRoute) {
-      // User navigated somewhere completely unrelated -> Clear instantly
-      clearTransition();
-      return;
-    }
-
-    // FIX: We are on the destination route and staying here. Previously
-    // there was no branch for this — the *normal*, expected case — so the
-    // fullscreen overlay div stayed mounted forever (only its label text
-    // faded out). Clear it after a short hold so the label-fade animation
-    // has time to finish before the overlay unmounts.
-    const timeout = setTimeout(() => {
-      clearTransition();
-    }, ARRIVAL_HOLD_MS);
-
-    return () => clearTimeout(timeout);
-  }, [location.pathname, phase, fromPath, activeRoute, setPhase, clearTransition]);
-
-  // 2. EXPAND ANIMATION
-  useEffect(() => {
-    if (phase === "expanding" && activeRect && activeRoute && scope.current && !isAnimating.current) {
-      isAnimating.current = true;
-      const runExpand = async () => {
-        try {
-          await animate(
-            scope.current,
-            {
-              top: [activeRect.top, 0],
-              left: [activeRect.left, 0],
-              width: [activeRect.width, window.innerWidth],
-              height: [activeRect.height, window.innerHeight],
-              borderRadius: [16, 0],
-            },
-            { duration: 0.45, ease: [0.16, 1, 0.3, 1] }
-          );
-
-          setPhase("expanded");
-
-          // Navigate ONLY after animation completes
-          const targetPath = activeRoute.startsWith("/") ? activeRoute : `/${activeRoute}`;
-          navigate(targetPath);
-        } catch {
-          clearTransition();
-        } finally {
-          isAnimating.current = false;
-        }
-      };
-
-      runExpand();
-    }
-  }, [phase, activeRect, activeRoute, animate, scope, navigate, setPhase, clearTransition]);
-
-  // 3. SHRINK ANIMATION
-  useEffect(() => {
-    if (phase === "shrinking" && activeRect && scope.current && !isAnimating.current) {
-      isAnimating.current = true;
-      const runShrink = async () => {
-        try {
-          await animate(
-            scope.current,
-            {
-              top: [0, activeRect.top],
-              left: [0, activeRect.left],
-              width: [window.innerWidth, activeRect.width],
-              height: [window.innerHeight, activeRect.height],
-              borderRadius: [0, 16],
-            },
-            { duration: 0.35, ease: [0.16, 1, 0.3, 1] }
-          );
-
-          // BOOM: Only clear the state AFTER the await completes!
-          clearTransition();
-        } catch {
-          clearTransition();
-        } finally {
-          isAnimating.current = false;
-        }
-      };
-
-      runShrink();
-    }
-  }, [phase, activeRect, animate, scope, clearTransition]);
-
-  if (!activeRect || phase === "idle") return null;
-
-  // FIX: "expanded" and "shrinking" both need fullscreen geometry as the
-  // *base* style. Previously only "shrinking" got 100vw/100vh/top:0/left:0
-  // here, so once React re-rendered after setPhase("expanded") it snapped
-  // the div's inline style back to the tiny activeRect values, fighting
-  // with whatever Framer Motion had just animated onto the DOM node.
-  const isFullscreen = phase === "expanded" || phase === "shrinking";
+  const { stack } = useNavTransition();
 
   return (
-    <div
-      ref={scope}
-      style={{
-        position: "fixed",
-        top: isFullscreen ? 0 : activeRect.top,
-        left: isFullscreen ? 0 : activeRect.left,
-        width: isFullscreen ? "100vw" : activeRect.width,
-        height: isFullscreen ? "100vh" : activeRect.height,
-        borderRadius: isFullscreen ? 0 : 16,
-        backgroundColor: "#0f172a",
-        zIndex: 99999,
-        pointerEvents: "none",
-      }}
-      className="flex items-center justify-center font-bold text-lg text-white overflow-hidden"
-    >
-      <motion.span
-        initial={{ opacity: 1 }}
-        animate={{ opacity: phase === "expanded" ? 0 : 1 }}
-        transition={{ duration: 0.2 }}
-      >
-        {activeRoute}
-      </motion.span>
-    </div>
+    <AnimatePresence>
+      {stack.map((item, index) => (
+        <motion.div
+          key={`shared-panel-${item.activeRoute}`}
+          layoutId={`shared-btn-${item.activeRoute}`}
+          style={{
+            position: "fixed",
+            top: PANEL_MARGIN.top,
+            left: PANEL_MARGIN.left,
+            width: `calc(100vw - ${PANEL_MARGIN.left + PANEL_MARGIN.right}px)`,
+            height: `calc(100vh - ${PANEL_MARGIN.top + PANEL_MARGIN.bottom}px)`,
+            borderRadius: 24,
+            backgroundColor: "#ffffff",
+            zIndex: 1 + index,
+            overflow: "hidden",
+            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
+          }}
+          transition={{
+            type: "spring",
+            stiffness: 300,
+            damping: 30,
+            mass: 0.8,
+          }}
+        >
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2, delay: 0.15 }}
+            className="w-full h-full text-slate-900 relative"
+          >
+            {/* Tekst en knop zijn hier weggehaald */}
+          </motion.div>
+        </motion.div>
+      ))}
+    </AnimatePresence>
   );
 }

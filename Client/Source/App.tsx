@@ -15,8 +15,13 @@ import Root_Picker from "@/Page/Root";
 // Chess Modular Views
 import Chess_Index from "@/Page/Chess/Index";
 import { Chess_Play_View } from "@/Page/Chess/Play";
-import { Chess_Lesson_View } from "@/Page/Chess/Lesson";
 import { Chess_Puzzle_View } from "@/Page/Chess/Puzzle";
+
+// Chess Lesson Split Views
+import { Chess_Category_View } from "@/Page/Chess/Lesson/Category";
+import { Chess_Subcategory_View } from "@/Page/Chess/Lesson/Subcategory";
+import { Chess_Lesson_List_View } from "@/Page/Chess/Lesson/List";
+import { Chess_Lesson_Runner_View } from "@/Page/Chess/Lesson/Runner";
 
 // Language Modular Views
 import Language_Root from "@/Page/Language/Root";
@@ -66,12 +71,12 @@ export default function App() {
                     <Route path="Puzzle" element={<Chess_Puzzle_View />} />
 
                     <Route path="Lesson">
-                      <Route index element={<Chess_Lesson_View />} />
+                      <Route index element={<Chess_Category_View />} />
                       <Route path=":Category">
-                        <Route index element={<Chess_Lesson_View />} />
+                        <Route index element={<Chess_Subcategory_View />} />
                         <Route path=":subcategory">
-                          <Route index element={<Chess_Lesson_View />} />
-                          <Route path=":Lesson_ID" element={<Chess_Lesson_View />} />
+                          <Route index element={<Chess_Lesson_List_View />} />
+                          <Route path=":Lesson_ID" element={<Chess_Lesson_Runner_View />} />
                         </Route>
                       </Route>
                     </Route>

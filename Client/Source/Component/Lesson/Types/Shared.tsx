@@ -1,5 +1,5 @@
 // Shared Types + helpers used across every exercise type.
-import { Button } from "@/Component/UI/Button";
+import { Button } from "@/Component/UI/button";
 import { cn } from "@/Library/Utility";
 
 export interface Exercise_Properties {
@@ -25,31 +25,39 @@ export interface Action_Bar_Properties {
   secondary?: { label: string; onClick: () => void; disabled?: boolean };
 }
 export function Action_Bar({ primary, secondary }: Action_Bar_Properties) {
+  const showSecondary = !!secondary && !secondary.disabled;
+  const showPrimary = !primary.disabled;
+  const bothHidden = !showSecondary && !showPrimary;
+
   return (
-    <div className="fixed bottom-0 inset-x-0 z-40 bg-background/95 backdrop-blur pt-3 pb-[env(safe-area-inset-bottom)]">
+    <div className="fixed bottom-0 z-40 pb-4">
       <div
         className={cn(
-          "flex flex-col-reverse gap-2 px-4 pb-3 max-w-md lg:max-w-xl mx-auto",
-          secondary && "sm:flex-row sm:justify-between",
+          "flex flex-col-reverse gap-2 px-4 pb-2 max-w-md lg:max-w-xl mx-auto",
+          secondary && (bothHidden ? "sm:flex-row sm:justify-center" : "sm:flex-row sm:justify-between"),
         )}
       >
-        {secondary && (
+        {showSecondary && (
           <Button
-            disabled={secondary.disabled}
-            onClick={secondary.onClick}
+            OnClick={secondary!.onClick}
+            Label={secondary!.label}
+            Color="#000000"
+            TextColor="#ffffff"
             className="w-full sm:w-auto sm:min-w-[140px]"
-          >
-            {secondary.label}
-          </Button>
+          />
         )}
-        <Button
-          active
-          disabled={primary.disabled}
-          onClick={primary.onClick}
-          className="w-full sm:w-auto sm:min-w-[140px] sm:ml-auto"
-        >
-          {primary.label}
-        </Button>
+        {showPrimary && (
+          <Button
+            OnClick={primary.onClick}
+            Label={primary.label}
+            Color="#000000"
+            TextColor="#ffffff"
+            className={cn(
+              "w-full sm:w-auto sm:min-w-[140px]",
+              bothHidden ? "sm:ml-0" : "sm:ml-auto",
+            )}
+          />
+        )}
       </div>
     </div>
   );

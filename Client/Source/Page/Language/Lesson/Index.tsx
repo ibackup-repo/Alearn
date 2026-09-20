@@ -1,15 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Lock } from "lucide-react";
-import { CardButton } from "@/Component/UI/card-button";
+import { Button } from "@/Component/UI/button";
 import { cn } from "@/Library/Utility";
 import { toast } from "@/Component/UI/use-toast";
 import { Supported_Language, Lesson_Record } from "@/Library/Language-Types";
 import { Get_Lessons_List } from "@/Library/Language-API";
 import { Is_Unlocked, Lesson_ID } from "@/Library/Lesson-Mastery";
-
-const GRID = "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 w-full";
-const CARD = "min-h-[64px] sm:min-h-[56px] py-3 px-3 sm:py-3.5 sm:px-4 flex items-center justify-between gap-2 text-left";
 
 function Roman_To_Int(roman: string): number {
   const map: Record<string, number> = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 };
@@ -26,15 +23,15 @@ interface LockableCardProps {
   title: string;
   subtitle?: string;
   locked: boolean;
+  navigateTo: string;
   onOpen: () => void;
 }
 
-function LockableCard({ title, subtitle, locked, onOpen }: LockableCardProps) {
+function LockableCard({ title, subtitle, locked, navigateTo, onOpen }: LockableCardProps) {
   const [clicks, setClicks] = useState(0);
 
   const onClick = () => {
     if (!locked) {
-      onOpen();
       return;
     }
     const next = clicks + 1;
@@ -49,18 +46,26 @@ function LockableCard({ title, subtitle, locked, onOpen }: LockableCardProps) {
     }
   };
 
-  return (
-    <CardButton
-      onClick={onClick}
-      title={locked ? "Triple-click to bypass" : undefined}
-      className={cn(CARD, "transition-transform sm:hover:scale-[1.02]", locked && "opacity-60")}
-    >
+  const labelContent = (
+    <div className="flex items-center justify-between gap-2 w-full text-left">
       <span className="flex-1">
         <span className="block font-semibold text-sm sm:text-base">{title}</span>
         {subtitle && <span className="block text-xs opacity-70">{subtitle}</span>}
       </span>
       {locked && <Lock className="h-4 w-4" />}
-    </CardButton>
+    </div>
+  );
+
+  return (
+    <Button
+      Label={labelContent}
+      NavigateTo={locked ? undefined : navigateTo}
+      OnClick={onClick}
+      Height={64}
+      Color="#000000"
+      TextColor="#ffffff"
+      className={cn("w-full transition-transform sm:hover:scale-[1.02]", locked && "opacity-60")}
+    />
   );
 }
 
@@ -121,25 +126,29 @@ export default function Levels_Page() {
   if (!levels.length) return <div className="text-sm py-6 text-center opacity-60">No levels available.</div>;
 
   return (
-    <div className={cn(GRID, "max-w-4xl mx-auto")}>
-      {levels.map((lv, i) => {
-        const id = Lesson_ID(lv);
-        const prevLessons = i === 0 ? [] : Object.keys(corpusLessons[levels[i - 1]] || {});
-        const prevLessonId = prevLessons[0] ? Lesson_ID(levels[i - 1], prevLessons[0]) : undefined;
+    <div className="px-8 py-4 w-full relative z-[60] max-w-8xl mx-auto">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 w-full">
+        {levels.map((lv, i) => {
+          const id = Lesson_ID(lv);
+          const prevLessons = i === 0 ? [] : Object.keys(corpusLessons[levels[i - 1]] || {});
+          const prevLessonId = prevLessons[0] ? Lesson_ID(levels[i - 1], prevLessons[0]) : undefined;
 
-        const locked = i > 0 && !Is_Unlocked(activeLang, id, prevLessonId);
-        const hasLessons = Object.keys(corpusLessons[lv] || {}).length > 0;
+          const locked = i > 0 && !Is_Unlocked(activeLang, id, prevLessonId);
+          const hasLessons = Object.keys(corpusLessons[lv] || {}).length > 0;
+          const targetUrl = `/Language/${activeLang}/Lesson/${lv}`;
 
-        return (
-          <LockableCard
-            key={lv}
-            title={lv}
-            subtitle={hasLessons ? undefined : "Coming soon"}
-            locked={locked}
-            onOpen={() => navigate(`/Language/${activeLang}/Lesson/${lv}`)}
-          />
-        );
-      })}
+          return (
+            <LockableCard
+              key={lv}
+              title={lv}
+              subtitle={hasLessons ? undefined : "Coming soon"}
+              locked={locked}
+              navigateTo={targetUrl}
+              onOpen={() => navigate(targetUrl)}
+            />
+          );
+        })}
+      </div>
     </div>
   );
 }

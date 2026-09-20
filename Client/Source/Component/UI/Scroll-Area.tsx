@@ -30,7 +30,8 @@ const ScrollBar = React.forwardRef<
     )}
     {...props}
   >
-    <ScrollAreaPrimitive.ScrollAreaThumb className="relative flex-1 rounded-full bg-border" />
+    {/* 'hidden' zorgt ervoor dat de hendel niet meer zichtbaar is */}
+    <ScrollAreaPrimitive.ScrollAreaThumb className="hidden relative flex-1 rounded-full bg-border" />
   </ScrollAreaPrimitive.ScrollAreaScrollbar>
 ));
 ScrollBar.Display_Name = ScrollAreaPrimitive.ScrollAreaScrollbar.Display_Name;

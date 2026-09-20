@@ -4,25 +4,27 @@ import { CardButton } from "@/Component/UI/card-button";
 import { Check, Sun, Moon, Laptop } from "lucide-react";
 
 const OPTIONS: { id: Theme_Choice; Label_Key: string; Icon: any }[] = [
-  { id: "light",  Label_Key: "themeLight",  Icon: Sun },
-  { id: "dark",   Label_Key: "themeDark",   Icon: Moon },
+  { id: "light", Label_Key: "themeLight", Icon: Sun },
+  { id: "dark", Label_Key: "themeDark", Icon: Moon },
   { id: "system", Label_Key: "themeSystem", Icon: Laptop },
 ];
 
-export function ThemeSection() {
+export function General() {
   const { theme, Set_Theme } = Use_App();
   const { t } = Use_Course_Language();
+
   return (
-    <div className="space-y-3">
+    <div className="w-full space-y-3">
+      <h3 className="text-sm font-semibold opacity-70">Weergave modus</h3>
       {OPTIONS.map(({ id, Label_Key, Icon }) => {
         const active = theme === id;
         return (
           <CardButton
             key={id}
             onClick={() => Set_Theme(id)}
-            className={active ? "bg-foreground text-background border-background" : ""}
+            className={`w-full ${active ? "bg-foreground text-background border-background" : ""}`}
           >
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between w-full">
               <span className="flex items-center gap-2 font-medium">
                 <Icon className="h-4 w-4" /> {t(Label_Key)}
               </span>
@@ -34,3 +36,5 @@ export function ThemeSection() {
     </div>
   );
 }
+
+export default General;

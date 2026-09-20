@@ -423,9 +423,10 @@ function Chessboard_Impl({
       onPointerDown={On_Board_Pointer_Down}
       onPointerUp={On_Board_Pointer_Up}
       className={cn(
-        "relative w-full aspect-square select-none rounded-[14px] overflow-hidden border-2 border-border",
-        className,
-      )}
+      // Change max dimensions so aspect-square never overflows height
+      "relative w-full h-full max-w-full max-h-full aspect-square select-none overflow-hidden border-2 border-border",
+      className,
+    )}
       role="img"
       aria-label="Chess position"
     >

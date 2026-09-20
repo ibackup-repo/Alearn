@@ -14,8 +14,8 @@
 @layer base {
   :root {
     /* Soft, friendly defaults (not pure black/white) */
-    --background: 210 20% 94%;         /* warm off-white */
-    --foreground: 222 15% 18%;         /* soft ink */
+    --background: 0 0% 0%;         /* warm off-white */
+    --foreground: 0 0% 100%;         /* soft ink */
 
     --card: 0 0% 100%;
     --card-foreground: 222 15% 18%;
@@ -76,8 +76,8 @@
   }
 
   .dark {
-    --background: 222 18% 9%;
-    --foreground: 40 10% 94%;
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
     --card: 222 18% 11%;
     --card-foreground: 40 10% 94%;
     --popover: 222 18% 11%;

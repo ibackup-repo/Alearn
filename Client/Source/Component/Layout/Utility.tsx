@@ -124,7 +124,7 @@ export function Navigator_Layout({
       className={cn(
         "relative transition-all duration-300 ease-in-out select-none shrink-0",
         isOpen 
-          ? cn("max-sm:fixed max-sm:inset-0 max-sm:z-[9999] max-sm:w-screen max-sm:h-screen sm:h-10", width) 
+          ? cn("max-sm:fixed max-sm:inset-0 max-sm:z-[50] max-sm:w-screen max-sm:h-screen sm:h-10", width) 
           : "w-10 h-10"
       )}
     >

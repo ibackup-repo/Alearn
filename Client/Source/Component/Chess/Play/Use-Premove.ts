@@ -72,7 +72,7 @@ export function Use_Premoves({
     const s = State_Reference.current;
     const queue = Premoves_Reference.current;
     if (!s || queue.length === 0) return;
-    if (s.game.Is_Game_Over() || s.game.turn() !== s.Player_Color) return;
+    if (s.game.isGameOver() || s.game.turn() !== s.Player_Color) return;
     const [head, ...rest] = queue;
     try {
       const mv = s.game.move({ from: head.from, to: head.to, promotion: head.promotion ?? "q" });
@@ -81,7 +81,7 @@ export function Use_Premoves({
       setPremoves(rest);
       Set_No_Animate_Once(true);
       force(n => n + 1);
-      if (!s.game.Is_Game_Over() && s.cfg.engine) Schedule_Engine_Reply();
+      if (!s.game.isGameOver() && s.cfg.engine) Schedule_Engine_Reply();
     } catch { setPremoves([]); }
   }, [State_Reference, Record_Mainline_Move, Set_No_Animate_Once, force, Schedule_Engine_Reply]);
 
