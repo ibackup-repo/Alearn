@@ -1,146 +1,546 @@
-export type Theme_Mode = "light" | "dark";
+export type Theme_Mode = "Light" | "Dark";
 export type Button_Variant = "Primary" | "Secondary";
 export type Button_State = "Normal" | "Hover" | "Active";
 
-export interface Gooey_Config {
+export interface Gooey_Configuration {
   Enabled: boolean;
   Blur: number;
   Contrast: number;
 }
 
-export interface Fluid_Config {
+export interface Fluid_Configuration {
   Enabled: boolean;
-  BeautifiedHover: boolean;
   Padding: number;
-  DrawBody: boolean;
+  Draw_Body: boolean;
   Friction: number;
   Attraction: number;
-  WaveAmplitude: number;
-  WaveFrequency: number;
-  DropletMinRadius: number;
-  DropletMaxRadius: number;
+  Attraction_Jitter: number;
+  Wave_Amplitude: number;
+  Rest_Outline_Amplitude: number;
+  Wave_Frequency: number;
+  Droplet_Min_Radius: number;
+  Droplet_Max_Radius: number;
+  Scale_Breathe_Amplitude: number;
+  Press_Scale_X: number;
+  Press_Scale_Y: number;
+  Spring_Stiffness: number;
+  Spring_Damping: number;
+  Hover_Splash_Min: number;
+  Hover_Splash_Max: number;
+  Hover_Splash_Intensity: number;
+  Press_Splash_Min: number;
+  Press_Splash_Max: number;
+  Press_Splash_Intensity: number;
+  Release_Splash_Min: number;
+  Release_Splash_Max: number;
+  Release_Splash_Intensity: number;
 }
 
-export interface Spacing_Config {
+export interface Spacing_Configuration {
   Top: number;
   Right: number;
   Bottom: number;
   Left: number;
 }
 
-export interface Button_State_Config {
+export interface Button_State_Configuration {
   BG_Color: string;
   Text_Color: string;
   Border_Radius: number;
   Has_Border: boolean;
   Border_Color: string;
-  Gooey: Gooey_Config;
-  Fluid: Fluid_Config;
-  Padding: Spacing_Config;
-  Margin: Spacing_Config;
+  Gooey: Gooey_Configuration;
+  Fluid: Fluid_Configuration;
+  Padding: Spacing_Configuration;
+  Margin: Spacing_Configuration;
 }
 
-export type Button_Customization_Map = {
-  [theme in Theme_Mode]: {
-    [variant in Button_Variant]: {
-      [state in Button_State]: Button_State_Config;
+export type Button_Configuration_Map = {
+  [Theme in Theme_Mode]: {
+    [Variant in Button_Variant]: {
+      [State in Button_State]: Button_State_Configuration;
     };
   };
 };
 
-// Standaard Fluid-configuratie gebaseerd op het Fluid.tsx component
-const DEFAULT_FLUID_CONFIG: Fluid_Config = {
-  Enabled: false,
-  BeautifiedHover: true,
-  Padding: 30,
-  DrawBody: true,
-  Friction: 0.88,
-  Attraction: 0.03,
-  WaveAmplitude: 2.5,
-  WaveFrequency: 0.05,
-  DropletMinRadius: 4,
-  DropletMaxRadius: 10,
-};
-
-// Algemene basisconfiguratie (voor Secondary knoppen)
-const DEFAULT_STATE_BASE: Button_State_Config = {
-  BG_Color: "#2563eb",
-  Text_Color: "#ffffff",
-  Border_Radius: 12,
-  Has_Border: false,
-  Border_Color: "#2563eb",
-  Gooey: { Enabled: false, Blur: 10, Contrast: 19 },
-  Fluid: DEFAULT_FLUID_CONFIG,
-  Padding: { Top: 12, Right: 16, Bottom: 12, Left: 16 },
-  Margin: { Top: 0, Right: 0, Bottom: 0, Left: 0 },
-};
-
-// Specifieke basis voor de Primary knop gebaseerd op het Fluid Button component (wit, capsule, gooey actief)
-const PRIMARY_STATE_BASE: Button_State_Config = {
-  BG_Color: "#ffffff",
-  Text_Color: "#0f172a",
-  Border_Radius: 28, // Capsule-vorm (op basis van Height 56px)
-  Has_Border: false,
-  Border_Color: "transparent",
-  Gooey: {
-    Enabled: true,
-    Blur: 5,        // Komt overeen met stdDeviation="5" in de SVG filter
-    Contrast: 19,   // Alpha matrix multiplier 19
-  },
-  Fluid: {
-    ...DEFAULT_FLUID_CONFIG,
-    Enabled: true,  // Direct geactiveerd voor Primary
-  },
-  Padding: { Top: 0, Right: 0, Bottom: 0, Left: 0 },
-  Margin: { Top: 0, Right: 0, Bottom: 0, Left: 0 },
-};
-
-export const DEFAULT_BUTTON_CONFIG: Button_Customization_Map = {
-  light: {
+export const Default_Button_Configuration: Button_Configuration_Map = {
+  Light: {
     Primary: {
-      Normal: { ...PRIMARY_STATE_BASE },
-      Hover: { ...PRIMARY_STATE_BASE },
-      Active: { ...PRIMARY_STATE_BASE },
+      Normal: {
+        BG_Color: "#ffffff",
+        Text_Color: "#0f172a",
+        Border_Radius: 28,
+        Has_Border: false,
+        Border_Color: "transparent",
+        Gooey: {
+          Enabled: true,
+          Blur: 5,
+          Contrast: 19,
+        },
+        Fluid: {
+          Enabled: false,
+          Padding: 0,
+          Draw_Body: false,
+          Friction: 0.5,
+          Attraction: 0.01,
+          Attraction_Jitter: 0,
+          Wave_Amplitude: 0,
+          Rest_Outline_Amplitude: 0,
+          Wave_Frequency: 0.01,
+          Droplet_Min_Radius: 0,
+          Droplet_Max_Radius: 0,
+          Scale_Breathe_Amplitude: 0,
+          Press_Scale_X: 0.8,
+          Press_Scale_Y: 0,
+          Spring_Stiffness: 0.01,
+          Spring_Damping: 0.5,
+          Hover_Splash_Min: 0,
+          Hover_Splash_Max: 0,
+          Hover_Splash_Intensity: 0,
+          Press_Splash_Min: 0,
+          Press_Splash_Max: 0,
+          Press_Splash_Intensity: 0,
+          Release_Splash_Min: 0,
+          Release_Splash_Max: 0,
+          Release_Splash_Intensity: 0,
+        },
+        Padding: { Top: 0, Right: 0, Bottom: 0, Left: 0 },
+        Margin: { Top: 0, Right: 0, Bottom: 0, Left: 0 },
+      },
+      Hover: {
+        BG_Color: "#ffffff",
+        Text_Color: "#0f172a",
+        Border_Radius: 28,
+        Has_Border: false,
+        Border_Color: "transparent",
+        Gooey: {
+          Enabled: true,
+          Blur: 5,
+          Contrast: 19,
+        },
+        Fluid: {
+          Enabled: true,
+          Padding: 30,
+          Draw_Body: true,
+          Friction: 0.88,
+          Attraction: 0.03,
+          Attraction_Jitter: 0.02,
+          Wave_Amplitude: 2.5,
+          Rest_Outline_Amplitude: 0.4,
+          Wave_Frequency: 0.05,
+          Droplet_Min_Radius: 4,
+          Droplet_Max_Radius: 14,
+          Scale_Breathe_Amplitude: 0.02,
+          Press_Scale_X: 1.08,
+          Press_Scale_Y: 0.88,
+          Spring_Stiffness: 0.15,
+          Spring_Damping: 0.75,
+          Hover_Splash_Min: 2,
+          Hover_Splash_Max: 4,
+          Hover_Splash_Intensity: 0.8,
+          Press_Splash_Min: 4,
+          Press_Splash_Max: 7,
+          Press_Splash_Intensity: 1.8,
+          Release_Splash_Min: 1,
+          Release_Splash_Max: 2,
+          Release_Splash_Intensity: 0.6,
+        },
+        Padding: { Top: 0, Right: 0, Bottom: 0, Left: 0 },
+        Margin: { Top: 0, Right: 0, Bottom: 0, Left: 0 },
+      },
+      Active: {
+        BG_Color: "#ffffff",
+        Text_Color: "#0f172a",
+        Border_Radius: 28,
+        Has_Border: false,
+        Border_Color: "transparent",
+        Gooey: {
+          Enabled: true,
+          Blur: 5,
+          Contrast: 19,
+        },
+        Fluid: {
+          Enabled: true,
+          Padding: 30,
+          Draw_Body: true,
+          Friction: 0.88,
+          Attraction: 0.03,
+          Attraction_Jitter: 0.02,
+          Wave_Amplitude: 2.5,
+          Rest_Outline_Amplitude: 0.4,
+          Wave_Frequency: 0.05,
+          Droplet_Min_Radius: 4,
+          Droplet_Max_Radius: 14,
+          Scale_Breathe_Amplitude: 0.02,
+          Press_Scale_X: 1.08,
+          Press_Scale_Y: 0.88,
+          Spring_Stiffness: 0.15,
+          Spring_Damping: 0.75,
+          Hover_Splash_Min: 2,
+          Hover_Splash_Max: 4,
+          Hover_Splash_Intensity: 0.8,
+          Press_Splash_Min: 4,
+          Press_Splash_Max: 7,
+          Press_Splash_Intensity: 1.8,
+          Release_Splash_Min: 1,
+          Release_Splash_Max: 2,
+          Release_Splash_Intensity: 0.6,
+        },
+        Padding: { Top: 0, Right: 0, Bottom: 0, Left: 0 },
+        Margin: { Top: 0, Right: 0, Bottom: 0, Left: 0 },
+      },
     },
     Secondary: {
-      Normal: { ...DEFAULT_STATE_BASE, BG_Color: "#f1f5f9", Text_Color: "#0f172a", Border_Color: "#e2e8f0" },
+      Normal: {
+        BG_Color: "#f1f5f9",
+        Text_Color: "#0f172a",
+        Border_Radius: 12,
+        Has_Border: false,
+        Border_Color: "#e2e8f0",
+        Gooey: { Enabled: false, Blur: 10, Contrast: 19 },
+        Fluid: {
+          Enabled: false,
+          Padding: 30,
+          Draw_Body: true,
+          Friction: 0.88,
+          Attraction: 0.03,
+          Attraction_Jitter: 0.02,
+          Wave_Amplitude: 2.5,
+          Rest_Outline_Amplitude: 0.4,
+          Wave_Frequency: 0.05,
+          Droplet_Min_Radius: 4,
+          Droplet_Max_Radius: 14,
+          Scale_Breathe_Amplitude: 0.02,
+          Press_Scale_X: 1.08,
+          Press_Scale_Y: 0.88,
+          Spring_Stiffness: 0.15,
+          Spring_Damping: 0.75,
+          Hover_Splash_Min: 2,
+          Hover_Splash_Max: 4,
+          Hover_Splash_Intensity: 0.8,
+          Press_Splash_Min: 4,
+          Press_Splash_Max: 7,
+          Press_Splash_Intensity: 1.8,
+          Release_Splash_Min: 1,
+          Release_Splash_Max: 2,
+          Release_Splash_Intensity: 0.6,
+        },
+        Padding: { Top: 12, Right: 16, Bottom: 12, Left: 16 },
+        Margin: { Top: 0, Right: 0, Bottom: 0, Left: 0 },
+      },
       Hover: {
-        ...DEFAULT_STATE_BASE,
         BG_Color: "#e2e8f0",
         Text_Color: "#0f172a",
+        Border_Radius: 12,
+        Has_Border: false,
         Border_Color: "#cbd5e1",
-        Fluid: { ...DEFAULT_FLUID_CONFIG, Enabled: true },
+        Gooey: { Enabled: false, Blur: 10, Contrast: 19 },
+        Fluid: {
+          Enabled: true,
+          Padding: 30,
+          Draw_Body: true,
+          Friction: 0.88,
+          Attraction: 0.03,
+          Attraction_Jitter: 0.02,
+          Wave_Amplitude: 2.5,
+          Rest_Outline_Amplitude: 0.4,
+          Wave_Frequency: 0.05,
+          Droplet_Min_Radius: 4,
+          Droplet_Max_Radius: 14,
+          Scale_Breathe_Amplitude: 0.02,
+          Press_Scale_X: 1.08,
+          Press_Scale_Y: 0.88,
+          Spring_Stiffness: 0.15,
+          Spring_Damping: 0.75,
+          Hover_Splash_Min: 2,
+          Hover_Splash_Max: 4,
+          Hover_Splash_Intensity: 0.8,
+          Press_Splash_Min: 4,
+          Press_Splash_Max: 7,
+          Press_Splash_Intensity: 1.8,
+          Release_Splash_Min: 1,
+          Release_Splash_Max: 2,
+          Release_Splash_Intensity: 0.6,
+        },
+        Padding: { Top: 12, Right: 16, Bottom: 12, Left: 16 },
+        Margin: { Top: 0, Right: 0, Bottom: 0, Left: 0 },
       },
       Active: {
-        ...DEFAULT_STATE_BASE,
         BG_Color: "#cbd5e1",
         Text_Color: "#0f172a",
+        Border_Radius: 12,
+        Has_Border: false,
         Border_Color: "#94a3b8",
-        Fluid: { ...DEFAULT_FLUID_CONFIG, Enabled: true },
+        Gooey: { Enabled: false, Blur: 10, Contrast: 19 },
+        Fluid: {
+          Enabled: true,
+          Padding: 30,
+          Draw_Body: true,
+          Friction: 0.88,
+          Attraction: 0.03,
+          Attraction_Jitter: 0.02,
+          Wave_Amplitude: 2.5,
+          Rest_Outline_Amplitude: 0.4,
+          Wave_Frequency: 0.05,
+          Droplet_Min_Radius: 4,
+          Droplet_Max_Radius: 14,
+          Scale_Breathe_Amplitude: 0.02,
+          Press_Scale_X: 1.08,
+          Press_Scale_Y: 0.88,
+          Spring_Stiffness: 0.15,
+          Spring_Damping: 0.75,
+          Hover_Splash_Min: 2,
+          Hover_Splash_Max: 4,
+          Hover_Splash_Intensity: 0.8,
+          Press_Splash_Min: 4,
+          Press_Splash_Max: 7,
+          Press_Splash_Intensity: 1.8,
+          Release_Splash_Min: 1,
+          Release_Splash_Max: 2,
+          Release_Splash_Intensity: 0.6,
+        },
+        Padding: { Top: 12, Right: 16, Bottom: 12, Left: 16 },
+        Margin: { Top: 0, Right: 0, Bottom: 0, Left: 0 },
       },
     },
   },
-  dark: {
+  Dark: {
     Primary: {
-      Normal: { ...PRIMARY_STATE_BASE },
-      Hover: { ...PRIMARY_STATE_BASE },
-      Active: { ...PRIMARY_STATE_BASE },
-    },
-    Secondary: {
-      Normal: { ...DEFAULT_STATE_BASE, BG_Color: "#1e293b", Text_Color: "#f8fafc", Border_Color: "#334155" },
+      Normal: {
+        BG_Color: "#ffffff",
+        Text_Color: "#0f172a",
+        Border_Radius: 28,
+        Has_Border: false,
+        Border_Color: "transparent",
+        Gooey: {
+          Enabled: true,
+          Blur: 5,
+          Contrast: 19,
+        },
+        Fluid: {
+          Enabled: true,
+          Padding: 30,
+          Draw_Body: true,
+          Friction: 0.88,
+          Attraction: 0.03,
+          Attraction_Jitter: 0.02,
+          Wave_Amplitude: 2.5,
+          Rest_Outline_Amplitude: 0.4,
+          Wave_Frequency: 0.05,
+          Droplet_Min_Radius: 4,
+          Droplet_Max_Radius: 14,
+          Scale_Breathe_Amplitude: 0.02,
+          Press_Scale_X: 1.08,
+          Press_Scale_Y: 0.88,
+          Spring_Stiffness: 0.15,
+          Spring_Damping: 0.75,
+          Hover_Splash_Min: 2,
+          Hover_Splash_Max: 4,
+          Hover_Splash_Intensity: 0.8,
+          Press_Splash_Min: 4,
+          Press_Splash_Max: 7,
+          Press_Splash_Intensity: 1.8,
+          Release_Splash_Min: 1,
+          Release_Splash_Max: 2,
+          Release_Splash_Intensity: 0.6,
+        },
+        Padding: { Top: 0, Right: 0, Bottom: 0, Left: 0 },
+        Margin: { Top: 0, Right: 0, Bottom: 0, Left: 0 },
+      },
       Hover: {
-        ...DEFAULT_STATE_BASE,
-        BG_Color: "#334155",
-        Text_Color: "#f8fafc",
-        Border_Color: "#475569",
-        Fluid: { ...DEFAULT_FLUID_CONFIG, Enabled: true },
+        BG_Color: "#ffffff",
+        Text_Color: "#0f172a",
+        Border_Radius: 28,
+        Has_Border: false,
+        Border_Color: "transparent",
+        Gooey: {
+          Enabled: true,
+          Blur: 5,
+          Contrast: 19,
+        },
+        Fluid: {
+          Enabled: true,
+          Padding: 30,
+          Draw_Body: true,
+          Friction: 0.88,
+          Attraction: 0.03,
+          Attraction_Jitter: 0.02,
+          Wave_Amplitude: 2.5,
+          Rest_Outline_Amplitude: 0.4,
+          Wave_Frequency: 0.05,
+          Droplet_Min_Radius: 4,
+          Droplet_Max_Radius: 14,
+          Scale_Breathe_Amplitude: 0.02,
+          Press_Scale_X: 1.08,
+          Press_Scale_Y: 0.88,
+          Spring_Stiffness: 0.15,
+          Spring_Damping: 0.75,
+          Hover_Splash_Min: 2,
+          Hover_Splash_Max: 4,
+          Hover_Splash_Intensity: 0.8,
+          Press_Splash_Min: 4,
+          Press_Splash_Max: 7,
+          Press_Splash_Intensity: 1.8,
+          Release_Splash_Min: 1,
+          Release_Splash_Max: 2,
+          Release_Splash_Intensity: 0.6,
+        },
+        Padding: { Top: 0, Right: 0, Bottom: 0, Left: 0 },
+        Margin: { Top: 0, Right: 0, Bottom: 0, Left: 0 },
       },
       Active: {
-        ...DEFAULT_STATE_BASE,
+        BG_Color: "#ffffff",
+        Text_Color: "#0f172a",
+        Border_Radius: 28,
+        Has_Border: false,
+        Border_Color: "transparent",
+        Gooey: {
+          Enabled: true,
+          Blur: 5,
+          Contrast: 19,
+        },
+        Fluid: {
+          Enabled: true,
+          Padding: 30,
+          Draw_Body: true,
+          Friction: 0.88,
+          Attraction: 0.03,
+          Attraction_Jitter: 0.02,
+          Wave_Amplitude: 2.5,
+          Rest_Outline_Amplitude: 0.4,
+          Wave_Frequency: 0.05,
+          Droplet_Min_Radius: 4,
+          Droplet_Max_Radius: 14,
+          Scale_Breathe_Amplitude: 0.02,
+          Press_Scale_X: 1.08,
+          Press_Scale_Y: 0.88,
+          Spring_Stiffness: 0.15,
+          Spring_Damping: 0.75,
+          Hover_Splash_Min: 2,
+          Hover_Splash_Max: 4,
+          Hover_Splash_Intensity: 0.8,
+          Press_Splash_Min: 4,
+          Press_Splash_Max: 7,
+          Press_Splash_Intensity: 1.8,
+          Release_Splash_Min: 1,
+          Release_Splash_Max: 2,
+          Release_Splash_Intensity: 0.6,
+        },
+        Padding: { Top: 0, Right: 0, Bottom: 0, Left: 0 },
+        Margin: { Top: 0, Right: 0, Bottom: 0, Left: 0 },
+      },
+    },
+    Secondary: {
+      Normal: {
+        BG_Color: "#1e293b",
+        Text_Color: "#f8fafc",
+        Border_Radius: 12,
+        Has_Border: false,
+        Border_Color: "#334155",
+        Gooey: { Enabled: false, Blur: 10, Contrast: 19 },
+        Fluid: {
+          Enabled: false,
+          Padding: 30,
+          Draw_Body: true,
+          Friction: 0.88,
+          Attraction: 0.03,
+          Attraction_Jitter: 0.02,
+          Wave_Amplitude: 2.5,
+          Rest_Outline_Amplitude: 0.4,
+          Wave_Frequency: 0.05,
+          Droplet_Min_Radius: 4,
+          Droplet_Max_Radius: 14,
+          Scale_Breathe_Amplitude: 0.02,
+          Press_Scale_X: 1.08,
+          Press_Scale_Y: 0.88,
+          Spring_Stiffness: 0.15,
+          Spring_Damping: 0.75,
+          Hover_Splash_Min: 2,
+          Hover_Splash_Max: 4,
+          Hover_Splash_Intensity: 0.8,
+          Press_Splash_Min: 4,
+          Press_Splash_Max: 7,
+          Press_Splash_Intensity: 1.8,
+          Release_Splash_Min: 1,
+          Release_Splash_Max: 2,
+          Release_Splash_Intensity: 0.6,
+        },
+        Padding: { Top: 12, Right: 16, Bottom: 12, Left: 16 },
+        Margin: { Top: 0, Right: 0, Bottom: 0, Left: 0 },
+      },
+      Hover: {
+        BG_Color: "#334155",
+        Text_Color: "#f8fafc",
+        Border_Radius: 12,
+        Has_Border: false,
+        Border_Color: "#475569",
+        Gooey: { Enabled: false, Blur: 10, Contrast: 19 },
+        Fluid: {
+          Enabled: true,
+          Padding: 30,
+          Draw_Body: true,
+          Friction: 0.88,
+          Attraction: 0.03,
+          Attraction_Jitter: 0.02,
+          Wave_Amplitude: 2.5,
+          Rest_Outline_Amplitude: 0.4,
+          Wave_Frequency: 0.05,
+          Droplet_Min_Radius: 4,
+          Droplet_Max_Radius: 14,
+          Scale_Breathe_Amplitude: 0.02,
+          Press_Scale_X: 1.08,
+          Press_Scale_Y: 0.88,
+          Spring_Stiffness: 0.15,
+          Spring_Damping: 0.75,
+          Hover_Splash_Min: 2,
+          Hover_Splash_Max: 4,
+          Hover_Splash_Intensity: 0.8,
+          Press_Splash_Min: 4,
+          Press_Splash_Max: 7,
+          Press_Splash_Intensity: 1.8,
+          Release_Splash_Min: 1,
+          Release_Splash_Max: 2,
+          Release_Splash_Intensity: 0.6,
+        },
+        Padding: { Top: 12, Right: 16, Bottom: 12, Left: 16 },
+        Margin: { Top: 0, Right: 0, Bottom: 0, Left: 0 },
+      },
+      Active: {
         BG_Color: "#475569",
         Text_Color: "#f8fafc",
+        Border_Radius: 12,
+        Has_Border: false,
         Border_Color: "#64748b",
-        Fluid: { ...DEFAULT_FLUID_CONFIG, Enabled: true },
+        Gooey: { Enabled: false, Blur: 10, Contrast: 19 },
+        Fluid: {
+          Enabled: true,
+          Padding: 30,
+          Draw_Body: true,
+          Friction: 0.88,
+          Attraction: 0.03,
+          Attraction_Jitter: 0.02,
+          Wave_Amplitude: 2.5,
+          Rest_Outline_Amplitude: 0.4,
+          Wave_Frequency: 0.05,
+          Droplet_Min_Radius: 4,
+          Droplet_Max_Radius: 14,
+          Scale_Breathe_Amplitude: 0.02,
+          Press_Scale_X: 1.08,
+          Press_Scale_Y: 0.88,
+          Spring_Stiffness: 0.15,
+          Spring_Damping: 0.75,
+          Hover_Splash_Min: 2,
+          Hover_Splash_Max: 4,
+          Hover_Splash_Intensity: 0.8,
+          Press_Splash_Min: 4,
+          Press_Splash_Max: 7,
+          Press_Splash_Intensity: 1.8,
+          Release_Splash_Min: 1,
+          Release_Splash_Max: 2,
+          Release_Splash_Intensity: 0.6,
+        },
+        Padding: { Top: 12, Right: 16, Bottom: 12, Left: 16 },
+        Margin: { Top: 0, Right: 0, Bottom: 0, Left: 0 },
       },
     },
   },
