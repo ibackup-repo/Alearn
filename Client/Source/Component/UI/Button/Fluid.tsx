@@ -1,5 +1,18 @@
 import React, { useLayoutEffect, useRef } from "react";
-import { Fluid_Configuration } from "./Configuration";
+import {
+  Gooey_Active_Configuration,
+  Gooey_Hover_Configuration,
+  Gooey_Normal_Configuration,
+} from "./Configuration";
+
+// De drie Gooey-configs delen alleen de Base-velden; Normal mist bv. Friction,
+// Attraction en alle Splash-waarden. Fluid kan met elk van de drie state-configs
+// worden aangeroepen, dus we typen het als union en vullen ontbrekende velden
+// hieronder aan met defaults.
+export type Gooey_Configuration =
+  | Gooey_Normal_Configuration
+  | Gooey_Hover_Configuration
+  | Gooey_Active_Configuration;
 
 export interface Fluid_Properties {
   Is_Hovered: boolean;
@@ -7,10 +20,54 @@ export interface Fluid_Properties {
   Width: number;
   Height: number;
   Color: string;
-  Configuration: Fluid_Configuration;
+  Configuration: Gooey_Configuration;
   // Wordt aangeroepen zodra de animatie na het afhoveren volledig is uitgerust
   // en het canvas is leeggemaakt. De Button schakelt dan terug naar de solide achtergrond.
   On_Settled?: () => void;
+}
+
+// Defaults voor velden die niet in elke Gooey_*_Configuration variant voorkomen
+// (bijv. Gooey_Normal_Configuration heeft geen Friction/Attraction/Splash-waarden).
+const Default_Optional_Gooey_Values = {
+  Wave_Amplitude: 2.5,
+  Rest_Outline_Amplitude: 0.4,
+  Scale_Breathe_Amplitude: 0.02,
+  Friction: 0.88,
+  Attraction: 0.03,
+  Attraction_Jitter: 0.02,
+  Droplet_Min_Radius: 4,
+  Droplet_Max_Radius: 14,
+  Press_Scale_X: 1.08,
+  Press_Scale_Y: 0.88,
+  Hover_Splash_Min: 2,
+  Hover_Splash_Max: 4,
+  Hover_Splash_Intensity: 0.8,
+  Press_Splash_Min: 4,
+  Press_Splash_Max: 7,
+  Press_Splash_Intensity: 1.8,
+  Release_Splash_Min: 1,
+  Release_Splash_Max: 2,
+  Release_Splash_Intensity: 0.6,
+};
+
+type Optional_Gooey_Fields = typeof Default_Optional_Gooey_Values;
+
+// Haalt de velden op die niet in alle drie de varianten gegarandeerd zijn,
+// met terugval op de defaults hierboven wanneer de meegegeven config (bv. Normal) ze niet heeft.
+function Resolve_Optional_Fields(
+  Configuration: Gooey_Configuration
+): Optional_Gooey_Fields {
+  const Partial_Configuration = Configuration as Partial<Optional_Gooey_Fields>;
+  const Resolved = { ...Default_Optional_Gooey_Values };
+  for (const Key of Object.keys(Default_Optional_Gooey_Values) as Array<
+    keyof Optional_Gooey_Fields
+  >) {
+    const Value = Partial_Configuration[Key];
+    if (typeof Value === "number") {
+      Resolved[Key] = Value;
+    }
+  }
+  return Resolved;
 }
 
 class Droplet {
@@ -23,7 +80,10 @@ class Droplet {
   Attraction: number;
   Center_X: number;
   Center_Y: number;
-  Button_Width: number;
+  // Afstand tot het midden waarbinnen een druppel als "terug in het lichaam"
+  // geldt en begint te krimpen. Gebaseerd op de rondingsradius (Height / 2),
+  // niet op de halve breedte — anders krimpen druppels al bij het spawnen.
+  Absorption_Radius: number;
   Color: string;
 
   constructor(
@@ -34,7 +94,7 @@ class Droplet {
     Radius: number,
     Center_X: number,
     Center_Y: number,
-    Button_Width: number,
+    Absorption_Radius: number,
     Color: string,
     Friction: number,
     Attraction: number,
@@ -47,7 +107,7 @@ class Droplet {
     this.Radius = Radius;
     this.Center_X = Center_X;
     this.Center_Y = Center_Y;
-    this.Button_Width = Button_Width;
+    this.Absorption_Radius = Absorption_Radius;
     this.Color = Color;
     this.Friction = Friction;
     this.Attraction = Attraction + Math.random() * Attraction_Jitter;
@@ -64,7 +124,7 @@ class Droplet {
     this.Y += this.Velocity_Y;
 
     const Distance_To_Center = Math.hypot(Delta_X, Delta_Y);
-    if (Distance_To_Center < this.Button_Width / 2) {
+    if (Distance_To_Center < this.Absorption_Radius) {
       this.Radius *= 0.92;
     }
   }
@@ -109,6 +169,12 @@ export const Fluid: React.FC<Fluid_Properties> = ({
   const On_Settled_Reference = useRef(On_Settled);
   On_Settled_Reference.current = On_Settled;
 
+  // De RAF-loop roept steeds dezelfde Render-closure aan (die van de render waarin
+  // de loop startte). Zonder deze ref gebruikt de loop dus de config van dát moment,
+  // bijv. de Hover-config terwijl je al in de Active-state zit.
+  const Latest_Reference = useRef({ Configuration, Color, Width, Height });
+  Latest_Reference.current = { Configuration, Color, Width, Height };
+
   // True zodra er echt iets getekend/geanimeerd is. Voorkomt dat On_Settled
   // afgaat bij een lege, idle mount (bijv. Dark-thema waar Fluid altijd gemount is).
   const Was_Active_Reference = useRef(false);
@@ -118,22 +184,20 @@ export const Fluid: React.FC<Fluid_Properties> = ({
   const Previous_Hovered = useRef(false);
   const Previous_Pressed = useRef(false);
 
+  const { Canvas_Padding, Draw_Body, Wave_Frequency, Spring_Stiffness, Spring_Damping } =
+    Configuration;
+
   const {
-    Padding,
-    Draw_Body,
     Friction,
     Attraction,
     Attraction_Jitter,
     Wave_Amplitude,
     Rest_Outline_Amplitude,
-    Wave_Frequency,
-    Droplet_Min_Radius,
-    Droplet_Max_Radius,
     Scale_Breathe_Amplitude,
     Press_Scale_X,
     Press_Scale_Y,
-    Spring_Stiffness,
-    Spring_Damping,
+    Droplet_Min_Radius,
+    Droplet_Max_Radius,
     Hover_Splash_Min,
     Hover_Splash_Max,
     Hover_Splash_Intensity,
@@ -143,10 +207,10 @@ export const Fluid: React.FC<Fluid_Properties> = ({
     Release_Splash_Min,
     Release_Splash_Max,
     Release_Splash_Intensity,
-  } = Configuration;
+  } = Resolve_Optional_Fields(Configuration);
 
-  const Total_Width = Width + Padding * 2;
-  const Total_Height = Height + Padding * 2;
+  const Total_Width = Width + Canvas_Padding * 2;
+  const Total_Height = Height + Canvas_Padding * 2;
   const Center_X = Total_Width / 2;
   const Center_Y = Total_Height / 2;
 
@@ -177,7 +241,7 @@ export const Fluid: React.FC<Fluid_Properties> = ({
           Radius,
           Center_X,
           Center_Y,
-          Width,
+          Height / 2,
           Color,
           Friction,
           Attraction,
@@ -201,6 +265,27 @@ export const Fluid: React.FC<Fluid_Properties> = ({
     const Hovered = Is_Hovered_Ref.current;
     const Pressed = Is_Pressed_Ref.current;
 
+    // Altijd de laatste props gebruiken (schaduwt bewust de waarden uit de closure)
+    const Live = Latest_Reference.current;
+    const { Canvas_Padding: Live_Canvas_Padding, Draw_Body, Wave_Frequency } =
+      Live.Configuration;
+    const {
+      Wave_Amplitude,
+      Rest_Outline_Amplitude,
+      Scale_Breathe_Amplitude,
+      Press_Scale_X,
+      Press_Scale_Y,
+      Spring_Stiffness: Live_Spring_Stiffness,
+      Spring_Damping: Live_Spring_Damping,
+    } = { ...Resolve_Optional_Fields(Live.Configuration), ...Live.Configuration };
+    const Width = Live.Width;
+    const Height = Live.Height;
+    const Color = Live.Color;
+    const Total_Width = Width + Live_Canvas_Padding * 2;
+    const Total_Height = Height + Live_Canvas_Padding * 2;
+    const Center_X = Total_Width / 2;
+    const Center_Y = Total_Height / 2;
+
     if (Hovered || Pressed || Droplets_Reference.current.length > 0) {
       Was_Active_Reference.current = true;
     }
@@ -220,21 +305,26 @@ export const Fluid: React.FC<Fluid_Properties> = ({
       Physics.Target_Y = 1;
     }
 
-    const Acceleration_X = (Physics.Target_X - Physics.Scale_X) * Spring_Stiffness;
-    const Acceleration_Y = (Physics.Target_Y - Physics.Scale_Y) * Spring_Stiffness;
-    Physics.Velocity_X = (Physics.Velocity_X + Acceleration_X) * Spring_Damping;
-    Physics.Velocity_Y = (Physics.Velocity_Y + Acceleration_Y) * Spring_Damping;
+    const Acceleration_X = (Physics.Target_X - Physics.Scale_X) * Live_Spring_Stiffness;
+    const Acceleration_Y = (Physics.Target_Y - Physics.Scale_Y) * Live_Spring_Stiffness;
+    Physics.Velocity_X = (Physics.Velocity_X + Acceleration_X) * Live_Spring_Damping;
+    Physics.Velocity_Y = (Physics.Velocity_Y + Acceleration_Y) * Live_Spring_Damping;
     Physics.Scale_X += Physics.Velocity_X;
     Physics.Scale_Y += Physics.Velocity_Y;
 
     if (Draw_Body) {
       Context.save();
       Context.translate(Center_X, Center_Y);
-      Context.scale(Physics.Scale_X, Physics.Scale_Y);
       Context.fillStyle = Color;
 
-      const Radius = Height / 2;
-      const Straight_Segment = Math.max(0, Width - Height);
+      // Schaal de AFMETINGEN, niet de hele canvas-context. Een non-uniforme
+      // context.scale rekt de ronde uiteinden uit tot ellipsen, waardoor de
+      // radius aan de zijkanten kleiner (spitser) lijkt.
+      const Scaled_Width = Width * Physics.Scale_X;
+      const Scaled_Height = Height * Physics.Scale_Y;
+      const Radius = Math.min(Scaled_Width, Scaled_Height) / 2;
+      const Straight_Segment_X = Math.max(0, Scaled_Width - Radius * 2);
+      const Straight_Segment_Y = Math.max(0, Scaled_Height - Radius * 2);
       const Amplitude = Hovered ? Wave_Amplitude : Rest_Outline_Amplitude;
       const Number_Of_Points = 64;
 
@@ -244,8 +334,10 @@ export const Fluid: React.FC<Fluid_Properties> = ({
         const Angle = Step * Math.PI * 2;
         let Point_X = Math.cos(Angle) * Radius;
         let Point_Y = Math.sin(Angle) * Radius;
-        if (Math.cos(Angle) > 0) Point_X += Straight_Segment / 2;
-        else Point_X -= Straight_Segment / 2;
+        if (Math.cos(Angle) > 0) Point_X += Straight_Segment_X / 2;
+        else Point_X -= Straight_Segment_X / 2;
+        if (Math.sin(Angle) > 0) Point_Y += Straight_Segment_Y / 2;
+        else Point_Y -= Straight_Segment_Y / 2;
 
         const Noise =
           Math.sin(Physics.Time * 3 + Index * Wave_Frequency) *

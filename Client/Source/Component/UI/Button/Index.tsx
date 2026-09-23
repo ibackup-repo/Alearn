@@ -8,9 +8,9 @@ import {
   Button_Variant,
   Button_State,
   Theme_Mode,
-  Fluid_Configuration,
+  Default_Button_Configuration,
 } from "./Configuration";
-import { Fluid } from "./Fluid";
+import { Fluid, Gooey_Configuration } from "./Fluid";
 
 export interface Button_Properties {
   Label?: string | React.ReactNode;
@@ -27,33 +27,13 @@ export interface Button_Properties {
   "aria-label"?: string;
 }
 
-const Default_Fluid: Fluid_Configuration = {
-  Enabled: false,
-  Padding: 30,
-  Draw_Body: true,
-  Friction: 0.88,
-  Attraction: 0.03,
-  Attraction_Jitter: 0.02,
-  Wave_Amplitude: 2.5,
-  Rest_Outline_Amplitude: 0.4,
-  Wave_Frequency: 0.05,
-  Droplet_Min_Radius: 4,
-  Droplet_Max_Radius: 14,
-  Scale_Breathe_Amplitude: 0.02,
-  Press_Scale_X: 1.08,
-  Press_Scale_Y: 0.88,
-  Spring_Stiffness: 0.15,
-  Spring_Damping: 0.75,
-  Hover_Splash_Min: 2,
-  Hover_Splash_Max: 4,
-  Hover_Splash_Intensity: 0.8,
-  Press_Splash_Min: 4,
-  Press_Splash_Max: 7,
-  Press_Splash_Intensity: 1.8,
-  Release_Splash_Min: 1,
-  Release_Splash_Max: 2,
-  Release_Splash_Intensity: 0.6,
-};
+// Gooey en Fluid zijn in Configuration.ts samengevoegd tot één veld (Gooey) per
+// state: dat object stuurt zowel het SVG-blur/contrast-filter als de canvas-
+// druppelanimatie aan. In plaats van deze defaults hier los te dupliceren (en
+// weer te laten verouderen), pakken we gewoon een volledig ingevulde variant
+// uit de canonieke Default_Button_Configuration.
+const Default_Fluid: Gooey_Configuration =
+  Default_Button_Configuration.Light.Primary.Hover.Gooey;
 
 // Vangnet: als On_Settled om wat voor reden dan ook nooit komt,
 // gaat het Fluid-effect na deze tijd (ms) alsnog uit.
@@ -81,7 +61,7 @@ export const Button: React.FC<Button_Properties> = ({
   const Container_Reference = useRef<HTMLDivElement>(null);
   const Is_Hovered_Reference = useRef(false);
   Is_Hovered_Reference.current = Is_Hovered;
-  const Last_Fluid_Configuration_Reference = useRef<Fluid_Configuration | null>(null);
+  const Last_Fluid_Configuration_Reference = useRef<Gooey_Configuration | null>(null);
 
   const Filter_Identifier = useId().replace(/:/g, "");
 
@@ -109,24 +89,19 @@ export const Button: React.FC<Button_Properties> = ({
   const Resolved_Has_Border = Configuration?.Has_Border ?? false;
   const Resolved_Border_Color = Configuration?.Border_Color || "transparent";
 
-  const Gooey_Configuration = Configuration?.Gooey ?? {
-    Enabled: false,
-    Blur: 10,
-    Contrast: 19,
-  };
+  // --- Fluid / Gooey -------------------------------------------------------
+  // Fluid_Wanted: staat het Gooey-effect (filter + canvas-body) aan in de
+  // HUIDIGE state (Normal/Hover/Active)?
+  const Fluid_Wanted = !!Configuration?.Gooey?.Enabled;
 
-  // --- Fluid -------------------------------------------------------------
-  // Fluid_Wanted: staat Fluid aan in de HUIDIGE state (Normal/Hover/Active)?
-  const Fluid_Wanted = !!Configuration?.Fluid?.Enabled;
-
-  // Onthoud de laatste actieve Fluid-config. Na het afhoveren valt de state terug
-  // naar Normal (waar Fluid uit kan staan), maar de uitrust-animatie moet nog
+  // Onthoud de laatste actieve Gooey-config. Na het afhoveren valt de state terug
+  // naar Normal (waar Gooey uit kan staan), maar de uitrust-animatie moet nog
   // met de hover-config afgemaakt worden.
-  if (Fluid_Wanted && Configuration?.Fluid) {
-    Last_Fluid_Configuration_Reference.current = Configuration.Fluid;
+  if (Fluid_Wanted && Configuration?.Gooey) {
+    Last_Fluid_Configuration_Reference.current = Configuration.Gooey;
   }
 
-  // Zodra Fluid gewenst is én de knop gehoverd wordt: body zichtbaar maken.
+  // Zodra het effect gewenst is én de knop gehoverd wordt: body zichtbaar maken.
   // (setState tijdens render is toegestaan voor de eigen component; React
   // rendert meteen opnieuw, vóór de commit, dus zonder tussenframe.)
   if (Fluid_Wanted && Is_Hovered && !Is_Fluid_Active) {
@@ -136,8 +111,8 @@ export const Button: React.FC<Button_Properties> = ({
   // Blijft gemount zolang het gewenst is OF de animatie nog uitrust.
   const Show_Fluid = Fluid_Wanted || Is_Fluid_Active;
 
-  const Fluid_Configuration_Data: Fluid_Configuration =
-    (Fluid_Wanted ? Configuration?.Fluid : Last_Fluid_Configuration_Reference.current) ??
+  const Fluid_Configuration_Data: Gooey_Configuration =
+    (Fluid_Wanted ? Configuration?.Gooey : Last_Fluid_Configuration_Reference.current) ??
     Default_Fluid;
 
   // Wordt door Fluid aangeroepen als het canvas leeg is. flushSync zorgt dat de
@@ -160,6 +135,9 @@ export const Button: React.FC<Button_Properties> = ({
 
   // Achtergrond is alleen transparant zolang de Fluid-body zelf tekent.
   const Body_Is_Drawn = Is_Fluid_Active && Fluid_Configuration_Data.Draw_Body;
+  // Het Gooey-filter is nu hetzelfde veld als Fluid_Wanted, dus dit valt samen
+  // met Show_Fluid (gewenst, of nog aan het uitrusten na afhoveren).
+  const Use_Gooey_Filter = Show_Fluid;
   // -----------------------------------------------------------------------
 
   const Padding = Configuration?.Padding ?? {
@@ -194,7 +172,6 @@ export const Button: React.FC<Button_Properties> = ({
 
   const Resolved_Aria_Label =
     Aria_Label || (typeof Label === "string" ? Label : undefined);
-  const Use_Gooey_Filter = Gooey_Configuration.Enabled || Show_Fluid;
 
   return (
     <div className="relative inline-block w-full">
@@ -210,13 +187,13 @@ export const Button: React.FC<Button_Properties> = ({
             >
               <feGaussianBlur
                 in="SourceGraphic"
-                stdDeviation={Gooey_Configuration.Blur}
+                stdDeviation={Fluid_Configuration_Data.Blur}
                 result="blur"
               />
               <feColorMatrix
                 in="blur"
                 mode="matrix"
-                values={`1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 ${Gooey_Configuration.Contrast} -9`}
+                values={`1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 ${Fluid_Configuration_Data.Contrast} -9`}
                 result="gooey"
               />
               <feComposite in="SourceGraphic" in2="gooey" operator="atop" />
@@ -229,8 +206,8 @@ export const Button: React.FC<Button_Properties> = ({
         <div
           style={{
             position: "absolute",
-            top: -Fluid_Configuration_Data.Padding,
-            left: -Fluid_Configuration_Data.Padding,
+            top: -Fluid_Configuration_Data.Canvas_Padding,
+            left: -Fluid_Configuration_Data.Canvas_Padding,
             filter: `url(#gooey-filter-${Filter_Identifier})`,
             pointerEvents: "none",
             zIndex: 1,
@@ -274,7 +251,7 @@ export const Button: React.FC<Button_Properties> = ({
           marginBottom: `${Margin.Bottom}px`,
           marginLeft: `${Margin.Left}px`,
           filter:
-            Gooey_Configuration.Enabled && !Show_Fluid
+            Fluid_Configuration_Data.Enabled && !Show_Fluid
               ? `url(#gooey-filter-${Filter_Identifier})`
               : "none",
           // Bewust GEEN transition op background-color: een fade van transparant

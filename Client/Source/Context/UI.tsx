@@ -5,8 +5,20 @@ import {
   Theme_Mode,
   Button_Variant,
   Button_State,
-  Button_State_Configuration,
+  Button_Normal_Configuration,
+  Button_Hover_Configuration,
+  Button_Active_Configuration,
 } from "@/Component/UI/Button/Configuration";
+
+// Configuration.ts exporteert geen los "Button_State_Configuration" type meer,
+// enkel de drie afzonderlijke state-varianten (die onderling verschillen in hun
+// Gooey-subconfig). Een union hiervan geeft via TypeScript's keyof-op-unions
+// automatisch de velden terug die alle drie delen (BG_Color, Padding, Gooey, ...),
+// wat precies is wat Update_Button_Single_Property generiek nodig heeft.
+export type Button_State_Configuration =
+  | Button_Normal_Configuration
+  | Button_Hover_Configuration
+  | Button_Active_Configuration;
 
 export interface UI_Context_Type {
   Button_Customization: Button_Configuration_Map;
